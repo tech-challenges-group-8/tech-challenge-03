@@ -1,0 +1,110 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  lint-and-build:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [20.x]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Create dummy Firebase config files
+        run: |
+          # Create dummy google-services.json for Android (in root)
+          cat > google-services.json << EOF
+          {
+            "project_info": {
+              "project_number": "123456789",
+              "project_id": "dummy-project-id"
+            },
+            "client": [
+              {
+                "client_info": {
+                  "mobilesdk_app_id": "1:123456789:android:dummy",
+                  "android_client_info": {
+                    "package_name": "com.dummy.app"
+                  }
+                },
+                "oauth_client": [],
+                "api_key": [
+                  {
+                    "current_key": "dummy-api-key"
+                  }
+                ],
+                "services": {
+                  "appinvite_service": {
+                    "other_platform_oauth_client": []
+                  }
+                }
+              }
+            ],
+            "configuration_version": "1"
+          }
+          EOF
+          
+          # Create dummy GoogleService-Info.plist for iOS (in root - Expo will copy it during prebuild)
+          cat > GoogleService-Info.plist << EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>CLIENT_ID</key>
+            <string>dummy-client-id</string>
+            <key>REVERSED_CLIENT_ID</key>
+            <string>dummy-reversed-client-id</string>
+            <key>API_KEY</key>
+            <string>dummy-api-key</string>
+            <key>GCM_SENDER_ID</key>
+            <string>123456789</string>
+            <key>PLIST_VERSION</key>
+            <string>1</string>
+            <key>BUNDLE_ID</key>
+            <string>com.dummy.app</string>
+            <key>PROJECT_ID</key>
+            <string>dummy-project-id</string>
+            <key>STORAGE_BUCKET</key>
+            <string>dummy-project-id.appspot.com</string>
+            <key>IS_ADS_ENABLED</key>
+            <false/>
+            <key>IS_ANALYTICS_ENABLED</key>
+            <false/>
+            <key>IS_APPINVITE_ENABLED</key>
+            <true/>
+            <key>IS_GCM_ENABLED</key>
+            <true/>
+            <key>IS_SIGNIN_ENABLED</key>
+            <true/>
+            <key>GOOGLE_APP_ID</key>
+            <string>1:123456789:ios:dummy</string>
+          </dict>
+          </plist>
+          EOF
+        
+      - name: Run TypeScript type checking
+        run: npx tsc --noEmit
+        
+      - name: Run ESLint
+        run: npm run lint
+        
+      - name: Build
+        run: npx expo prebuild
+        
