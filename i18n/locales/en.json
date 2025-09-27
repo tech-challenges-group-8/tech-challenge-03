@@ -1,0 +1,53 @@
+{
+  "auth": {
+    "signIn": "Sign In",
+    "signUp": "Sign Up",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "displayName": "Display Name (Optional)",
+    "forgotPassword": "Forgot Password?",
+    "dontHaveAccount": "Don't have an account? Sign Up",
+    "alreadyHaveAccount": "Already have an account? Sign In",
+    "signingIn": "Signing In...",
+    "creatingAccount": "Creating Account...",
+    "logout": "Logout",
+    "profile": "Profile"
+  },
+  "welcome": {
+    "appName": "Financial Management",
+    "subtitle": "Manage your finances with ease",
+    "loginPrompt": "Please sign in to continue"
+  },
+  "profile": {
+    "displayName": "Display Name:",
+    "email": "Email:",
+    "emailVerified": "Email Verified:",
+    "userId": "User ID:",
+    "notSet": "Not set",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "messages": {
+    "error": "Error",
+    "success": "Success",
+    "fillAllFields": "Please fill in all fields",
+    "fillAllRequiredFields": "Please fill in all required fields",
+    "passwordsDoNotMatch": "Passwords do not match",
+    "passwordTooShort": "Password must be at least 6 characters long",
+    "enterEmailAddress": "Please enter your email address",
+    "loggedInSuccessfully": "Logged in successfully!",
+    "accountCreatedSuccessfully": "Account created successfully!",
+    "passwordResetEmailSent": "Password reset email sent!",
+    "loggedOutSuccessfully": "Logged out successfully",
+    "checkingAuthentication": "Checking authentication...",
+    "loading": "Loading..."
+  },
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "ok": "OK",
+    "retry": "Retry"
+  }
+}

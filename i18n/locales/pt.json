@@ -1,0 +1,53 @@
+{
+  "auth": {
+    "signIn": "Entrar",
+    "signUp": "Cadastrar",
+    "email": "E-mail",
+    "password": "Senha",
+    "confirmPassword": "Confirmar Senha",
+    "displayName": "Nome de Exibição (Opcional)",
+    "forgotPassword": "Esqueceu a senha?",
+    "dontHaveAccount": "Não tem uma conta? Cadastre-se",
+    "alreadyHaveAccount": "Já tem uma conta? Entre",
+    "signingIn": "Entrando...",
+    "creatingAccount": "Criando conta...",
+    "logout": "Sair",
+    "profile": "Perfil"
+  },
+  "welcome": {
+    "appName": "Gestão Financeira",
+    "subtitle": "Gerencie suas finanças com facilidade",
+    "loginPrompt": "Por favor, faça login para continuar"
+  },
+  "profile": {
+    "displayName": "Nome de Exibição:",
+    "email": "E-mail:",
+    "emailVerified": "E-mail Verificado:",
+    "userId": "ID do Usuário:",
+    "notSet": "Não definido",
+    "yes": "Sim",
+    "no": "Não"
+  },
+  "messages": {
+    "error": "Erro",
+    "success": "Sucesso",
+    "fillAllFields": "Por favor, preencha todos os campos",
+    "fillAllRequiredFields": "Por favor, preencha todos os campos obrigatórios",
+    "passwordsDoNotMatch": "As senhas não coincidem",
+    "passwordTooShort": "A senha deve ter pelo menos 6 caracteres",
+    "enterEmailAddress": "Por favor, insira seu endereço de e-mail",
+    "loggedInSuccessfully": "Login realizado com sucesso!",
+    "accountCreatedSuccessfully": "Conta criada com sucesso!",
+    "passwordResetEmailSent": "E-mail de recuperação de senha enviado!",
+    "loggedOutSuccessfully": "Logout realizado com sucesso",
+    "checkingAuthentication": "Verificando autenticação...",
+    "loading": "Carregando..."
+  },
+  "common": {
+    "loading": "Carregando...",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "ok": "OK",
+    "retry": "Tentar novamente"
+  }
+}
