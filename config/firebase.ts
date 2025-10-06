@@ -1,5 +1,7 @@
 import { FirebaseApp, getApps, initializeApp } from 'firebase/app';
 import { Auth, getAuth } from 'firebase/auth';
+import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || 'dummy-api-key-for-build',
@@ -21,5 +23,8 @@ if (getApps().length === 0) {
 
 auth = getAuth(app);
 
-export { auth };
+const db = getFirestore(app);       // 🔹 Firestore (banco de dados)
+const storage = getStorage(app); 
+
+export { auth, db, storage };
 export default app;
