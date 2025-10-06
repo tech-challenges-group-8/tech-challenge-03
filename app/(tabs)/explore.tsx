@@ -2,106 +2,148 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedButton, ThemedInput } from "@/components/ui";
 import { ThemedCurrencyInput } from "@/components/ui/ThemedCurrencyInput";
 import { ThemedSelect } from "@/components/ui/ThemedSelect";
+import { auth } from "@/config/firebase";
 import { Colors, SPACING } from "@/constants/theme";
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { pickAndUploadImage } from "@/services/firebase/pickAndUploadImage";
+import { addTransacao, deleteTransacao, getTransacoes, Transacao, updateTransacao } from "@/services/firebase/transacoes";
+import { formatarData } from "@/utils/dateUtils";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useState } from "react";
-import { Alert, FlatList, Image, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-
-type Transacao = {
-  id: number;
-  tipo: "Deposito" | "Transferencia";
-  descricao: string;
-  valor: number;
-  dataCriacao: string;
-  imagem?: string;
-};
-
-// 🔹 Mock inicial (poderia vir da API)
-const MOCK_DATA: Transacao[] = Array.from({ length: 50 }).map((_, i) => ({
-  id: i + 1,
-  tipo: i % 2 === 0 ? "Deposito" : "Transferencia",
-  descricao: `Transação ${i + 1}`,
-  valor: Math.floor(Math.random() * 1000) + 100,
-  dataCriacao: "12/12/2024",
-  imagem: i === 1 ? "https://picsum.photos/40" : undefined
-}));
+import {
+  Alert,
+  FlatList,
+  Image,
+  Modal,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 const NEW_TRANSACTION: Transacao = {
-  id: 0,
+  userId: "",
   tipo: "Deposito",
   descricao: "",
   valor: 0,
-  dataCriacao: "12/12/2024"
-}
+  dataCriacao: new Date().toISOString(),
+};
 
 export default function TabTwoScreen() {
   const [data, setData] = useState<Transacao[]>([]);
-  const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
-  const [errorDescricao, setErrorDescricao] = useState<string | null>(null);
-  const [errorValor, setErrorValor] = useState<string | null>(null);
   const [filterTipo, setFilterTipo] = useState<string | null>(null);
   const [selectedTransaction, setSelectedTransaction] = useState<Transacao | null>(null);
   const [selectedImagem, setSelectedImagem] = useState<string | undefined>(undefined);
+  const [errorDescricao, setErrorDescricao] = useState<string | null>(null);
+  const [errorValor, setErrorValor] = useState<string | null>(null);
 
-  // Carrega + dados (simulando API com paginação)
-  const loadMore = useCallback(() => {
-    const perPage = 10;
-    const nextData = MOCK_DATA.slice((page - 1) * perPage, page * perPage);
-    setData((prev) => [...prev, ...nextData]);
-    setPage((prev) => prev + 1);
-  }, [page]);
+  const user = auth.currentUser;
+
+  const loadData = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
+    const transacoes = await getTransacoes();
+    setData(transacoes);
+    setLoading(false);
+  }, [user]);
 
   useEffect(() => {
-    loadMore();
-  }, []);
+    loadData();
+  }, [loadData]);
 
   const handleSalvar = async () => {
-    setLoading(true);
-    if(selectedTransaction){
-      setTimeout(() => {
-        if(selectedTransaction.descricao == null || selectedTransaction.descricao === ""){
-          setErrorDescricao("Descricao Obrigatoria!");
-          setLoading(false);
-          return;
-        }else{
-          setErrorDescricao(null);
-        }
+    if (!selectedTransaction) return;
 
-        if(selectedTransaction.valor <= 0){
-          setErrorValor("Valor precisa ser maior que zero!");
-          setLoading(false);
-          return;
-        }else{
-          setErrorValor(null);
-        }
-
-        if(selectedTransaction.id > 0){
-          Alert.alert('Success', 'Atualizar');
-        }else{
-          Alert.alert('Success', 'Cadastrar');
-        }
-
-        setLoading(false);
-      }, 2000);
-    }else{
-      Alert.alert('Error', 'Ocorreu um erro ao salvar a');
+    if (!selectedTransaction.descricao) {
+      setErrorDescricao("Descrição obrigatória");
+      return;
     }
+    if (selectedTransaction.valor <= 0) {
+      setErrorValor("Valor precisa ser maior que zero");
+      return;
+    }
+
+    setLoading(true);
+
+    if (selectedTransaction.id) {
+      try {
+        await updateTransacao(selectedTransaction);
+      } catch (error) {
+        console.error("Erro ao atualizar:", error);
+        Alert.alert("Erro", "Não foi possível atualizar a transação.");
+      }
+    }else{
+      try {
+        await addTransacao(selectedTransaction);
+      } catch (error) {
+        console.error("Erro ao cadastrar:", error);
+        Alert.alert("Erro", "Não foi possível cadastrar a transação.");
+      }
+    }
+
+    setLoading(false);
+    setSelectedTransaction(null);
+    await loadData();
   };
 
   async function handleUpload() {
     const url = await pickAndUploadImage();
-    if (url) {
-      console.log("Imagem salva no Firebase:", url);
-      setSelectedTransaction((prev) => prev ? { ...prev, imagem: url || undefined } : null);
+    if (!url) return;
+
+    if (selectedTransaction) {
+      const updatedTransaction = { ...selectedTransaction, imagem: url };
+      setSelectedTransaction(updatedTransaction);
+
+      if (updatedTransaction.id) {
+        setLoading(true);
+        try {
+          await updateTransacao(updatedTransaction);
+          loadData();
+          Alert.alert("Sucesso", "Comprovante cadastrado com sucesso!");
+        } catch (error) {
+          console.error("Erro ao atualizar:", error);
+          Alert.alert("Erro", "Não foi possível atualizar a transação.");
+        } finally {
+          setLoading(false);
+        }
+      }
     }
   }
 
-  const newTransaction = async () => {
-    setSelectedTransaction(NEW_TRANSACTION);
+
+  function confirmDelete(transactionId: string) {
+    Alert.alert(
+      "Confirmar exclusão",
+      "Deseja realmente excluir esta transação?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        { text: "Excluir", style: "destructive", onPress: () => handleDeleteTransaction(transactionId) }
+      ]
+    );
+  }
+
+  async function handleDeleteTransaction(transactionId: string) {
+    try {
+
+      await deleteTransacao(transactionId);
+      setSelectedTransaction(null);
+      loadData();
+      Alert.alert("Sucesso", "Transação excluída com sucesso!");
+    } catch (error) {
+      console.error("Erro ao excluir:", error);
+      Alert.alert("Erro", "Não foi possível excluir a transação.");
+    }
+  }
+
+  const newTransaction = () => {
+    if (!user) {
+      Alert.alert("Erro", "Usuário não autenticado");
+      return;
+    }
+    setSelectedTransaction({ ...NEW_TRANSACTION, userId: user.uid });
   };
 
   // Aplica filtro
@@ -117,7 +159,7 @@ export default function TabTwoScreen() {
         {/* Primeira linha -> descricao esquerda / tipo direita */}
         <View style={styles.box1}>
           <ThemedText type="h2">{item.descricao}</ThemedText>
-          <ThemedText type="body2">{item.dataCriacao} - {item.tipo}</ThemedText>
+          <ThemedText type="body2">{formatarData(item.dataCriacao)} - {item.tipo}</ThemedText>
         </View>
 
         {/* Segunda linha -> valor direita */}
@@ -172,9 +214,9 @@ export default function TabTwoScreen() {
       {/* 📜 Lista com Scroll Infinito */}
       <FlatList
         data={filteredData}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={(item) => item.id ?? ""}
         renderItem={renderItem}
-        onEndReached={loadMore}
+        onEndReached={loadData}
         onEndReachedThreshold={0.2}
         ListFooterComponent={<Text style={{ textAlign: "center", marginVertical: 10 }}>Carregando...</Text>}
       />
@@ -184,7 +226,7 @@ export default function TabTwoScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalContentForm}>
-              <ThemedText type="h1">{(selectedTransaction && selectedTransaction.id > 0) ? "Editar" : "Cadastrar"} Transacao</ThemedText>
+              <ThemedText type="h1">{(selectedTransaction && selectedTransaction.id != null) ? "Editar" : "Cadastrar"} Transacao</ThemedText>
               <ThemedInput
                 label="Descricao"
                 placeholder="Informar Descricao"
@@ -256,6 +298,16 @@ export default function TabTwoScreen() {
                 loading={loading}
                 size="small"
               />
+
+              {selectedTransaction?.id && (
+                <ThemedButton
+                  title="Excluir"
+                  onPress={() => confirmDelete(selectedTransaction.id!)}
+                  variant="delete"
+                  loading={loading}
+                  size="small"
+                />
+              )}
               
               <ThemedButton
                 title="Voltar"

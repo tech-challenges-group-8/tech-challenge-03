@@ -6,7 +6,7 @@ import { ActivityIndicator, StyleSheet, Text, TouchableOpacity } from 'react-nat
 interface ThemedButtonProps {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'outline';
+  variant?: 'primary' | 'secondary' | 'outline' | 'delete';
   disabled?: boolean;
   loading?: boolean;
   size?: 'small' | 'medium' | 'large';
@@ -35,6 +35,8 @@ export function ThemedButton({
         return [...baseStyle, { backgroundColor: colors.success }];
       case 'secondary':
         return [...baseStyle, { backgroundColor: colors.error }];
+      case 'delete':
+        return [...baseStyle, { backgroundColor: "#f50000ff" }];
       case 'outline':
         return [
           ...baseStyle,

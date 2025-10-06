@@ -1,5 +1,6 @@
 import * as ImagePicker from "expo-image-picker";
-import { getDownloadURL, getStorage, ref, uploadBytes } from "firebase/storage";
+//import { getDownloadURL, getStorage, ref, uploadBytes } from "firebase/storage";
+import { getStorage } from "firebase/storage";
 import app from "../../config/firebase";
 
 const storage = getStorage(app);
@@ -20,22 +21,23 @@ export async function pickAndUploadImage(): Promise<string | null> {
 
     if (result.canceled) return null;
 
-    const asset = result.assets[0];
-    const uri = asset.uri;
+    return "https://picsum.photos/40";
+    // const asset = result.assets[0];
+    // const uri = asset.uri;
 
-    // nome único
-    const safeName = (asset.fileName || "upload").replace(/\s+/g, "_");
-    const filename = `images/${Date.now()}-${safeName}`;
-    const storageRef = ref(storage, filename);
+    // // nome único
+    // const safeName = (asset.fileName || "upload").replace(/\s+/g, "_");
+    // const filename = `images/${Date.now()}-${safeName}`;
+    // const storageRef = ref(storage, filename);
 
-    // no React Native, fetch(uri).blob() funciona melhor que tentar ArrayBuffer
-    const response = await fetch(uri);
-    const blob = await response.blob();
+    // // no React Native, fetch(uri).blob() funciona melhor que tentar ArrayBuffer
+    // const response = await fetch(uri);
+    // const blob = await response.blob();
 
-    await uploadBytes(storageRef, blob);
-    const downloadUrl = await getDownloadURL(storageRef);
+    // await uploadBytes(storageRef, blob);
+    // const downloadUrl = await getDownloadURL(storageRef);
 
-    return downloadUrl;
+    // return downloadUrl;
   } catch (error) {
     console.error("Erro ao carregar imagem:", error);
     return null;
