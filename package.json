@@ -4,7 +4,6 @@
   "version": "1.0.0",
   "scripts": {
     "start": "expo start --tunnel",
-    "reset-project": "node ./scripts/reset-project.js",
     "android": "expo run:android",
     "android:offline": "expo start --android --offline",
     "ios": "expo run:ios",
@@ -31,7 +30,6 @@
     "@react-navigation/native": "^7.1.8",
     "expo": "~54.0.10",
     "expo-constants": "~18.0.9",
-    "expo-dev-client": "^6.0.12",
     "expo-font": "~14.0.8",
     "expo-haptics": "~15.0.7",
     "expo-image": "~3.0.8",
