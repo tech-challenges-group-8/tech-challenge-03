@@ -91,12 +91,16 @@ export default function TabTwoScreen() {
   };
 
   async function handleUploadComprovante() {
-    
-    const url = await pickAndUploadImage();
-    if (!url) return;
-
     setLoading(true);
+    const url = await pickAndUploadImage();
+    if (!url){
+      setLoading(false);
+      return;
+    }
+
+    
     if (selectedTransaction) {
+      
       const updatedTransaction = { ...selectedTransaction, imagem: url };
       setSelectedTransaction(updatedTransaction);
 
@@ -112,27 +116,32 @@ export default function TabTwoScreen() {
         } finally {
           setLoading(false);
         }
+      }else{
+        setLoading(false);
+        Alert.alert("Sucesso", "Comprovante carregado com sucesso!");
       }
     }
-    setLoading(false);
   }
 
 
-  function confirmDelete(transactionId: string) {
+  function confirmDelete(transacao: Transacao) {
     Alert.alert(
       "Confirmar exclusão",
       "Deseja realmente excluir esta transação?",
       [
         { text: "Cancelar", style: "cancel" },
-        { text: "Excluir", style: "destructive", onPress: () => handleDeleteTransaction(transactionId) }
+        { text: "Excluir", style: "destructive", onPress: () => handleDeleteTransaction(transacao) }
       ]
     );
   }
 
-  async function handleDeleteTransaction(transactionId: string) {
+  async function handleDeleteTransaction(transacao: Transacao) {
     try {
       setLoading(true);
-      await deleteTransacao(transactionId);
+      await deleteTransacao(transacao.id!);
+      if(transacao.imagem){
+        await deleteImageByUrl(transacao.imagem);
+      }
       setSelectedTransaction(null);
       loadData();
       setLoading(false);
@@ -340,7 +349,7 @@ export default function TabTwoScreen() {
               {selectedTransaction?.id && (
                 <ThemedButton
                   title="Excluir"
-                  onPress={() => confirmDelete(selectedTransaction.id!)}
+                  onPress={() => confirmDelete(selectedTransaction!)}
                   variant="delete"
                   size="small"
                 />
