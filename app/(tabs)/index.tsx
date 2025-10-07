@@ -15,6 +15,7 @@ import { ThemedView } from '@/components/themed-view';
 import { auth } from '@/config/firebase';
 import { Colors, SPACING } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useI18n } from '@/hooks/useI18n';
 import { getTransacoesPaginated, Transacao } from '@/services/firebase/transacoes';
 import { formatarData } from '@/utils/dateUtils';
 
@@ -56,6 +57,7 @@ export default function HomeScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const user = auth.currentUser;
+  const { t } = useI18n();
 
   const loadDashboardData = React.useCallback(async () => {
     if (!user) return;
@@ -304,7 +306,7 @@ export default function HomeScreen() {
       <ThemedView style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={colors.primary} />
         <ThemedText style={{ marginTop: SPACING, color: colors.textSecondary }}>
-          Carregando dashboard...
+          {t('dashboard.loadingMessage')}
         </ThemedText>
       </ThemedView>
     );
@@ -318,10 +320,10 @@ export default function HomeScreen() {
           transform: [{ translateY: slideAnim }]
         }}>
           <ThemedText type="title" style={{ color: colors.text }}>
-            Dashboard
+            {t('dashboard.title')}
           </ThemedText>
           <ThemedText type="body1" style={{ color: colors.textSecondary, marginTop: 4 }}>
-            Visão geral das suas transações
+            {t('dashboard.subtitle')}
           </ThemedText>
         </Animated.View>
       </ThemedView>
@@ -329,28 +331,28 @@ export default function HomeScreen() {
       {/* Stats Grid */}
       <ThemedView style={styles.statsContainer}>
         <StatCard
-          title="Saldo Total"
+          title={t('dashboard.totalBalance')}
           value={`R$ ${stats.totalBalance.toFixed(2)}`}
           icon="wallet"
           color={stats.totalBalance >= 0 ? colors.success : colors.error}
           delay={0}
         />
         <StatCard
-          title="Total Depósitos"
+          title={t('dashboard.totalDeposits')}
           value={`R$ ${stats.totalDeposits.toFixed(2)}`}
           icon="arrow-down"
           color={colors.success}
           delay={100}
         />
         <StatCard
-          title="Total Transferências"
+          title={t('dashboard.totalTransfers')}
           value={`R$ ${stats.totalTransfers.toFixed(2)}`}
           icon="arrow-up"
           color={colors.error}
           delay={200}
         />
         <StatCard
-          title="Transações"
+          title={t('dashboard.transactionCount')}
           value={stats.transactionCount.toString()}
           icon="list"
           color={colors.primary}
@@ -368,7 +370,7 @@ export default function HomeScreen() {
       ]}>
         <ThemedView style={styles.sectionHeader}>
           <ThemedText type="h2" style={{ color: colors.text }}>
-            Transações - Últimos 7 Dias
+            {t('dashboard.chartTitle')}
           </ThemedText>
         </ThemedView>
         
@@ -376,11 +378,11 @@ export default function HomeScreen() {
         <ThemedView style={styles.chartLegend}>
           <ThemedView style={styles.legendItem}>
             <ThemedView style={[styles.legendColor, { backgroundColor: colors.success }]} />
-            <ThemedText type="body2" style={{ color: colors.text }}>Depósitos</ThemedText>
+            <ThemedText type="body2" style={{ color: colors.text }}>{t('transactions.deposits')}</ThemedText>
           </ThemedView>
           <ThemedView style={styles.legendItem}>
             <ThemedView style={[styles.legendColor, { backgroundColor: colors.error }]} />
-            <ThemedText type="body2" style={{ color: colors.text }}>Transferências</ThemedText>
+            <ThemedText type="body2" style={{ color: colors.text }}>{t('transactions.transfers')}</ThemedText>
           </ThemedView>
         </ThemedView>
 
@@ -421,7 +423,7 @@ export default function HomeScreen() {
             <ThemedView style={styles.chartEmptyState}>
               <Ionicons name="analytics-outline" size={48} color={colors.textDisabled} />
               <ThemedText type="body1" style={{ color: colors.textSecondary, marginTop: SPACING, textAlign: 'center' }}>
-                Dados insuficientes para gerar gráfico
+                {t('dashboard.chartEmptyState')}
               </ThemedText>
             </ThemedView>
           )}
@@ -438,11 +440,11 @@ export default function HomeScreen() {
       ]}>
         <ThemedView style={styles.sectionHeader}>
           <ThemedText type="h2" style={{ color: colors.text }}>
-            Transações Recentes
+            {t('dashboard.recentTransactions')}
           </ThemedText>
           <TouchableOpacity>
             <ThemedText type="body2" style={{ color: colors.primary }}>
-              Ver todas
+              {t('common.viewAll')}
             </ThemedText>
           </TouchableOpacity>
         </ThemedView>
@@ -460,7 +462,7 @@ export default function HomeScreen() {
             <ThemedView style={styles.emptyState}>
               <Ionicons name="document-outline" size={48} color={colors.textDisabled} />
               <ThemedText type="body1" style={{ color: colors.textSecondary, marginTop: SPACING }}>
-                Nenhuma transação encontrada
+                {t('dashboard.noTransactionsFound')}
               </ThemedText>
             </ThemedView>
           )}

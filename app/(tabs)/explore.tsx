@@ -6,6 +6,7 @@ import { ThemedSelect } from "@/components/ui/ThemedSelect";
 import { auth } from "@/config/firebase";
 import { Colors, SPACING } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useI18n } from "@/hooks/useI18n";
 import { deleteImageByUrl, pickAndUploadImage } from "@/services/firebase/pickAndUploadImage";
 import { addTransacao, deleteTransacao, getTransacoesPaginated, Transacao, updateTransacao } from "@/services/firebase/transacoes";
 import { formatarData } from "@/utils/dateUtils";
@@ -307,16 +308,17 @@ export default function TabTwoScreen() {
 
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
+  const { t } = useI18n();
 
   return (
     <ThemedView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
       <ThemedView style={styles.header}>
         <ThemedText type="title" style={{ color: colors.text }}>
-          Transações
+          {t('transactions.title')}
         </ThemedText>
         <ThemedText type="body1" style={{ color: colors.textSecondary, marginTop: 4 }}>
-          Gerencie suas transações financeiras
+          {t('transactions.subtitle')}
         </ThemedText>
       </ThemedView>
 
@@ -324,7 +326,7 @@ export default function TabTwoScreen() {
       <ThemedView style={styles.searchContainer}>
         <ThemedInput
           label=""
-          placeholder="Filtrar por descrição..."
+          placeholder={t('transactions.filterPlaceholder')}
           value={search}
           onChangeText={setSearch}
           style={styles.searchInput}
@@ -348,7 +350,7 @@ export default function TabTwoScreen() {
               color: filterTipo === null ? colors.background : colors.text 
             }}
           >
-            Todos
+            {t('common.all')}
           </ThemedText>
         </TouchableOpacity>
         <TouchableOpacity
@@ -367,7 +369,7 @@ export default function TabTwoScreen() {
               color: filterTipo === "Deposito" ? colors.background : colors.text 
             }}
           >
-            Depósitos
+            {t('transactions.deposits')}
           </ThemedText>
         </TouchableOpacity>
         <TouchableOpacity
