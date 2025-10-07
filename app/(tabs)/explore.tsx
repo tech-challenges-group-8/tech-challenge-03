@@ -5,12 +5,13 @@ import { ThemedSelect } from "@/components/ui/ThemedSelect";
 import { auth } from "@/config/firebase";
 import { Colors, SPACING } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { pickAndUploadImage } from "@/services/firebase/pickAndUploadImage";
-import { addTransacao, deleteTransacao, getTransacoes, Transacao, updateTransacao } from "@/services/firebase/transacoes";
+import { deleteImageByUrl, pickAndUploadImage } from "@/services/firebase/pickAndUploadImage";
+import { addTransacao, deleteTransacao, getTransacoesPaginated, Transacao, updateTransacao } from "@/services/firebase/transacoes";
 import { formatarData } from "@/utils/dateUtils";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   FlatList,
   Image,
@@ -19,7 +20,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 
 const NEW_TRANSACTION: Transacao = {
@@ -40,19 +41,67 @@ export default function TabTwoScreen() {
   const [errorDescricao, setErrorDescricao] = useState<string | null>(null);
   const [errorValor, setErrorValor] = useState<string | null>(null);
 
+  // 🆕 NOVO: Estado para rastrear o último documento carregado
+  const [lastTransaction, setLastTransaction] = useState<any>(null);
+  // 🆕 NOVO: Estado para saber se não há mais dados para buscar
+  const [hasMore, setHasMore] = useState(true);
+
   const user = auth.currentUser;
 
-  const loadData = useCallback(async () => {
+  const PAGE_SIZE = 15; // Certifique-se de que está definida e importada
+
+  const loadData = useCallback(async (refresh = false) => {
+
+    if (loading) return;
     if (!user) return;
+
+    // Se for refresh: 1. Reseta os estados de controle. 2. Continua a execução.
+    // Se não for refresh: 3. Checa se tem mais. Se não tiver, sai.
+    if (refresh) {
+      // 🚀 OBRIGATÓRIO: Força o reset para reativar o scroll infinito
+      setData([]);
+      setLastTransaction(null);
+      setHasMore(true);
+    } else if (!hasMore) {
+      // Bloqueia a paginação se já soubermos que não há mais dados (e não é refresh)
+      return;
+    }
+
     setLoading(true);
-    const transacoes = await getTransacoes();
-    setData(transacoes);
-    setLoading(false);
-  }, [user]);
+
+    const startAfterItem = refresh ? null : lastTransaction;
+
+    try {
+      const { transacoes, lastItem } = await getTransacoesPaginated(startAfterItem);
+
+      // Determina se é a última página (usando PAGE_SIZE = 15)
+      if (transacoes.length < PAGE_SIZE) {
+        setHasMore(false);
+      } else {
+        // Se trouxe a página inteira, ainda pode haver mais
+        setHasMore(true);
+      }
+
+      if (transacoes.length > 0) {
+        // Anexa os novos dados à lista (que foi limpa se era refresh)
+        setData((prevData) => (refresh ? transacoes : [...prevData, ...transacoes]));
+        setLastTransaction(lastItem);
+      }
+
+    } catch (error) {
+      console.error("Erro ao carregar dados paginados:", error);
+      setHasMore(false);
+    } finally {
+      setLoading(false);
+    }
+
+  }, [user, hasMore, lastTransaction]); // Mantenha as dependências limpas
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    if (user && data.length === 0 && !loading) {
+      loadData(true);
+    }
+  }, [user, loading, data.length, loadData]);
 
   const handleSalvar = async () => {
     if (!selectedTransaction) return;
@@ -75,7 +124,7 @@ export default function TabTwoScreen() {
         console.error("Erro ao atualizar:", error);
         Alert.alert("Erro", "Não foi possível atualizar a transação.");
       }
-    }else{
+    } else {
       try {
         await addTransacao(selectedTransaction);
       } catch (error) {
@@ -86,22 +135,28 @@ export default function TabTwoScreen() {
 
     setLoading(false);
     setSelectedTransaction(null);
-    await loadData();
+    await loadData(true);
   };
 
-  async function handleUpload() {
+  async function handleUploadComprovante() {
+    setLoading(true);
     const url = await pickAndUploadImage();
-    if (!url) return;
+    if (!url) {
+      setLoading(false);
+      return;
+    }
+
 
     if (selectedTransaction) {
+
       const updatedTransaction = { ...selectedTransaction, imagem: url };
       setSelectedTransaction(updatedTransaction);
 
       if (updatedTransaction.id) {
-        setLoading(true);
+
         try {
           await updateTransacao(updatedTransaction);
-          loadData();
+          loadData(true);
           Alert.alert("Sucesso", "Comprovante cadastrado com sucesso!");
         } catch (error) {
           console.error("Erro ao atualizar:", error);
@@ -109,32 +164,68 @@ export default function TabTwoScreen() {
         } finally {
           setLoading(false);
         }
+      } else {
+        setLoading(false);
+        Alert.alert("Sucesso", "Comprovante carregado com sucesso!");
       }
     }
   }
 
 
-  function confirmDelete(transactionId: string) {
+  function confirmDelete(transacao: Transacao) {
     Alert.alert(
       "Confirmar exclusão",
       "Deseja realmente excluir esta transação?",
       [
         { text: "Cancelar", style: "cancel" },
-        { text: "Excluir", style: "destructive", onPress: () => handleDeleteTransaction(transactionId) }
+        { text: "Excluir", style: "destructive", onPress: () => handleDeleteTransaction(transacao) }
       ]
     );
   }
 
-  async function handleDeleteTransaction(transactionId: string) {
+  async function handleDeleteTransaction(transacao: Transacao) {
     try {
-
-      await deleteTransacao(transactionId);
+      setLoading(true);
+      await deleteTransacao(transacao.id!);
+      if (transacao.imagem) {
+        await deleteImageByUrl(transacao.imagem);
+      }
       setSelectedTransaction(null);
-      loadData();
+      loadData(true);
+      setLoading(false);
       Alert.alert("Sucesso", "Transação excluída com sucesso!");
     } catch (error) {
       console.error("Erro ao excluir:", error);
       Alert.alert("Erro", "Não foi possível excluir a transação.");
+    }
+  }
+
+  function confirmDeleteComprovante(transacao: Transacao) {
+    Alert.alert(
+      "Confirmar exclusão",
+      "Deseja realmente excluir este comprovante?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        { text: "Excluir", style: "destructive", onPress: () => handleDeleteComprovante(transacao) }
+      ]
+    );
+  }
+
+  async function handleDeleteComprovante(transacao: Transacao) {
+    try {
+      if (transacao && transacao.imagem) {
+        await deleteImageByUrl(transacao.imagem);
+        setSelectedImagem(undefined);
+        const updatedTransaction = { ...transacao, imagem: "" };
+        setSelectedTransaction(updatedTransaction);
+        if (updatedTransaction.id) {
+          await updateTransacao(updatedTransaction);
+        }
+        Alert.alert("Sucesso", "Comprovante excluído com sucesso!");
+      }
+    } catch (error) {
+      console.error("Erro ao excluir:", error);
+      Alert.alert("Erro", "Não foi possível excluir a comprovante.");
     }
   }
 
@@ -164,7 +255,7 @@ export default function TabTwoScreen() {
 
         {/* Segunda linha -> valor direita */}
         <View style={styles.box2}>
-          <Text 
+          <Text
             style={[
               styles.valor,
               item.tipo === "Deposito" ? styles.valorPositivo : styles.valorNegativo
@@ -216,14 +307,39 @@ export default function TabTwoScreen() {
         data={filteredData}
         keyExtractor={(item) => item.id ?? ""}
         renderItem={renderItem}
-        onEndReached={loadData}
+        // ⚠️ Só chama se NÃO estiver carregando e houver mais dados
+        onEndReached={!loading && hasMore ? () => loadData(false) : null}
         onEndReachedThreshold={0.2}
-        ListFooterComponent={<Text style={{ textAlign: "center", marginVertical: 10 }}>Carregando...</Text>}
+
+        // 🆕 NOVO: Indicador de carregamento no rodapé
+        ListFooterComponent={
+          loading && hasMore ? (
+            <ActivityIndicator
+              size="small"
+              color={colors.primary}
+              style={{ marginVertical: SPACING }}
+            />
+          ) : (
+            // Mensagem para quando não há mais dados (opcional)
+            <Text style={{ textAlign: "center", marginVertical: SPACING, color: colors.text }}>
+              {data.length > 0 && !loading && !hasMore ? 'Fim da lista' : null}
+            </Text>
+          )
+        }
+        // Opcional: Adicionar "Puxar para Atualizar" (Pull-to-Refresh)
+        refreshing={loading && data.length === 0} // Mostra o loader de refresh se for o carregamento inicial
+        onRefresh={() => loadData(true)} // Puxa para recarregar tudo
+
       />
-      
+
       {/* Modal para visualizar Transacao */}
       <Modal visible={!!selectedTransaction} transparent animationType="fade">
         <View style={styles.modalOverlay}>
+          {loading && (
+            <View style={styles.loadingOverlay}>
+              <ActivityIndicator size="large" color="#FFFFFF" />
+            </View>
+          )}
           <View style={styles.modalContent}>
             <View style={styles.modalContentForm}>
               <ThemedText type="h1">{(selectedTransaction && selectedTransaction.id != null) ? "Editar" : "Cadastrar"} Transacao</ThemedText>
@@ -243,9 +359,9 @@ export default function TabTwoScreen() {
                   setSelectedTransaction((prev) =>
                     prev
                       ? {
-                          ...prev,
-                          tipo: tipo === "Deposito" ? "Deposito" : "Transferencia",
-                        }
+                        ...prev,
+                        tipo: tipo === "Deposito" ? "Deposito" : "Transferencia",
+                      }
                       : null
                   )
                 }
@@ -265,28 +381,28 @@ export default function TabTwoScreen() {
               />
 
               {
-                selectedTransaction?.imagem ? 
-                (
-                  <TouchableOpacity 
-                    style={styles.boxVisualizarAnexo}
-                    onPress={() => setSelectedImagem(selectedTransaction.imagem)}
-                  >
-                    <View style={styles.boxVisualizarAnexoIcone}>
-                      <Ionicons name="attach" size={40} color="#FFF" style={{ marginRight: 0 }} />  
-                    </View>
-                    <ThemedText type="body1" style={{ textAlign: "center" }}>Visualizar Comprovante</ThemedText>
-                  </TouchableOpacity>
-                ):(
-                  <TouchableOpacity 
-                    style={styles.boxVisualizarAnexo}
-                    onPress={handleUpload}
-                  >
-                    <View style={styles.boxVisualizarAnexoIcone}>
-                      <Ionicons name="attach" size={40} color="#FFF" style={{ marginRight: 0 }} />  
-                    </View>
-                    <ThemedText type="body1" style={{ textAlign: "center" }}>Cadastrar Comprovante</ThemedText>
-                  </TouchableOpacity>
-                )
+                selectedTransaction?.imagem ?
+                  (
+                    <TouchableOpacity
+                      style={styles.boxVisualizarAnexo}
+                      onPress={() => setSelectedImagem(selectedTransaction.imagem)}
+                    >
+                      <View style={styles.boxVisualizarAnexoIcone}>
+                        <Ionicons name="attach" size={40} color="#FFF" style={{ marginRight: 0 }} />
+                      </View>
+                      <ThemedText type="body1" style={{ textAlign: "center" }}>Visualizar Comprovante</ThemedText>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.boxVisualizarAnexo}
+                      onPress={handleUploadComprovante}
+                    >
+                      <View style={styles.boxVisualizarAnexoIcone}>
+                        <Ionicons name="attach" size={40} color="#FFF" style={{ marginRight: 0 }} />
+                      </View>
+                      <ThemedText type="body1" style={{ textAlign: "center" }}>Cadastrar Comprovante</ThemedText>
+                    </TouchableOpacity>
+                  )
               }
             </View>
 
@@ -295,23 +411,21 @@ export default function TabTwoScreen() {
                 title="Salvar"
                 onPress={handleSalvar}
                 variant="primary"
-                loading={loading}
                 size="small"
               />
 
               {selectedTransaction?.id && (
                 <ThemedButton
                   title="Excluir"
-                  onPress={() => confirmDelete(selectedTransaction.id!)}
+                  onPress={() => confirmDelete(selectedTransaction!)}
                   variant="delete"
-                  loading={loading}
                   size="small"
                 />
               )}
-              
+
               <ThemedButton
                 title="Voltar"
-                onPress={() => {setSelectedTransaction(null); setErrorDescricao(null); setErrorValor(null);}}
+                onPress={() => { setSelectedTransaction(null); setErrorDescricao(null); setErrorValor(null); }}
                 variant="secondary"
                 size="small"
               />
@@ -323,6 +437,8 @@ export default function TabTwoScreen() {
       {/* Modal para visualizar imagem */}
       <Modal visible={!!selectedImagem} transparent animationType="fade">
         <View style={styles.modalOverlay}>
+          {/* 1. Exibir o Loading Globalmente no Modal */}
+
           <View style={styles.modalContent}>
             {selectedImagem && (
               <Image
@@ -335,6 +451,12 @@ export default function TabTwoScreen() {
               title="Fechar"
               onPress={() => setSelectedImagem(undefined)}
               variant="secondary"
+              size="small"
+            />
+            <ThemedButton
+              title="Excluir Comprovante"
+              onPress={() => confirmDeleteComprovante(selectedTransaction!)}
+              variant="delete"
               size="small"
             />
           </View>
@@ -372,10 +494,10 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     flexWrap: "wrap"
   },
-  box1:{
+  box1: {
     width: "70%",
   },
-  box2:{
+  box2: {
     width: "30%",
     flexDirection: "row",
     justifyContent: "flex-end",
@@ -384,7 +506,7 @@ const styles = StyleSheet.create({
   valor: {
     fontSize: 16,
     fontWeight: "bold",
-    
+
   },
   valorPositivo: {
     color: "#2a9d8f",
@@ -407,7 +529,7 @@ const styles = StyleSheet.create({
     width: "90%",
     height: "70%",
   },
-  modalContentForm:{
+  modalContentForm: {
     backgroundColor: "#FFF",
     flexDirection: "column",
     alignItems: "center",
@@ -425,7 +547,7 @@ const styles = StyleSheet.create({
     borderRadius: "100%",
     padding: 7
   },
-  rowModelButton:{
+  rowModelButton: {
     width: "100%",
     flexDirection: "row",
     justifyContent: "flex-end",
@@ -447,5 +569,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 3,
     elevation: 5, // sombra Android
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject, // Posiciona sobre todo o modal
+    backgroundColor: 'rgba(0, 0, 0, 0.6)', // Fundo escuro semi-transparente para focar no spinner
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10, // Garante que o spinner fique acima de todo o conteúdo
   },
 });
