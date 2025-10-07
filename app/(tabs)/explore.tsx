@@ -1,27 +1,27 @@
+import React, { useCallback, useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  StyleSheet,
+} from "react-native";
+
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { ThemedButton, ThemedInput } from "@/components/ui";
-import { ThemedCurrencyInput } from "@/components/ui/ThemedCurrencyInput";
-import { ThemedSelect } from "@/components/ui/ThemedSelect";
+import {
+  FloatingActionButton,
+  ImageModal,
+  TransactionCard,
+  TransactionFilters,
+  TransactionModal
+} from "@/components/transactions";
+import { PageTitle } from "@/components/ui";
 import { auth } from "@/config/firebase";
 import { Colors, SPACING } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useI18n } from "@/hooks/useI18n";
 import { deleteImageByUrl, pickAndUploadImage } from "@/services/firebase/pickAndUploadImage";
 import { addTransacao, deleteTransacao, getTransacoesPaginated, Transacao, updateTransacao } from "@/services/firebase/transacoes";
-import { formatarData } from "@/utils/dateUtils";
-import { Ionicons } from "@expo/vector-icons";
-import React, { useCallback, useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  Image,
-  Modal,
-  StyleSheet,
-  TouchableOpacity,
-  View
-} from "react-native";
 
 const NEW_TRANSACTION: Transacao = {
   userId: "",
@@ -249,10 +249,39 @@ export default function TabTwoScreen() {
 
   const newTransaction = () => {
     if (!user) {
-      Alert.alert("Erro", "Usuário não autenticado");
+      Alert.alert(t('messages.error'), t('transactions.userNotAuthenticated'));
       return;
     }
     setSelectedTransaction({ ...NEW_TRANSACTION, userId: user.uid });
+  };
+
+  // Modal helper functions
+  const handleCloseModal = () => {
+    setSelectedTransaction(null);
+    setErrorDescricao(null);
+    setErrorValor(null);
+  };
+
+  const handleTransactionChange = (field: string, value: any) => {
+    setSelectedTransaction((prev) => prev ? { ...prev, [field]: value } : null);
+  };
+
+  const handleUploadReceiptPress = () => {
+    if (selectedTransaction?.imagem) {
+      setSelectedImagem(selectedTransaction.imagem);
+    } else {
+      handleUploadComprovante();
+    }
+  };
+
+  const handleCloseImageModal = () => {
+    setSelectedImagem(undefined);
+  };
+
+  const handleDeleteReceiptPress = () => {
+    if (selectedTransaction) {
+      confirmDeleteComprovante(selectedTransaction);
+    }
   };
 
   // Aplica filtro
@@ -263,47 +292,10 @@ export default function TabTwoScreen() {
   });
 
   const renderItem = ({ item }: { item: Transacao }) => (
-    <TouchableOpacity onPress={() => setSelectedTransaction(item)}>
-      <ThemedView style={[styles.card, { backgroundColor: colors.background, borderColor: colors.border }]}>
-        {/* Transaction icon */}
-        <ThemedView style={[
-          styles.transactionIcon,
-          { 
-            backgroundColor: item.tipo === "Deposito" ? colors.success + '20' : colors.error + '20'
-          }
-        ]}>
-          <Ionicons 
-            name={item.tipo === "Deposito" ? "arrow-down" : "arrow-up"} 
-            size={20} 
-            color={item.tipo === "Deposito" ? colors.success : colors.error}
-          />
-        </ThemedView>
-
-        {/* Transaction content */}
-        <ThemedView style={styles.transactionContent}>
-          <ThemedText type="h2" style={{ color: colors.text }}>{item.descricao}</ThemedText>
-          <ThemedText type="body2" style={{ color: colors.textSecondary }}>
-            {formatarData(item.dataCriacao)} - {item.tipo}
-          </ThemedText>
-        </ThemedView>
-
-        {/* Transaction value */}
-        <ThemedView style={styles.transactionValue}>
-          <ThemedText
-            type="body1"
-            style={[
-              styles.valor,
-              { 
-                color: item.tipo === "Deposito" ? colors.success : colors.error,
-                fontWeight: 'bold'
-              }
-            ]}
-          >
-            {item.tipo === "Deposito" ? "+" : "-"}R$ {item.valor.toFixed(2)}
-          </ThemedText>
-        </ThemedView>
-      </ThemedView>
-    </TouchableOpacity>
+    <TransactionCard 
+      transaction={item} 
+      onPress={setSelectedTransaction}
+    />
   );
 
   const colorScheme = useColorScheme() ?? 'light';
@@ -312,86 +304,18 @@ export default function TabTwoScreen() {
 
   return (
     <ThemedView style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <ThemedView style={styles.header}>
-        <ThemedText type="title" style={{ color: colors.text }}>
-          {t('transactions.title')}
-        </ThemedText>
-        <ThemedText type="body1" style={{ color: colors.textSecondary, marginTop: 4 }}>
-          {t('transactions.subtitle')}
-        </ThemedText>
-      </ThemedView>
+      <PageTitle
+        title={t('transactions.title')}
+        subtitle={t('transactions.subtitle')}
+      />
 
-      {/* 🔎 Filtro */}
-      <ThemedView style={styles.searchContainer}>
-        <ThemedInput
-          label=""
-          placeholder={t('transactions.filterPlaceholder')}
-          value={search}
-          onChangeText={setSearch}
-          style={styles.searchInput}
-        />
-      </ThemedView>
-
-      <ThemedView style={styles.filterRow}>
-        <TouchableOpacity
-          style={[
-            styles.filterBtn, 
-            { 
-              backgroundColor: filterTipo === null ? colors.primary : colors.backgroundLight,
-              borderColor: colors.border
-            }
-          ]}
-          onPress={() => setFilterTipo(null)}
-        >
-          <ThemedText 
-            type="body2" 
-            style={{ 
-              color: filterTipo === null ? colors.background : colors.text 
-            }}
-          >
-            {t('common.all')}
-          </ThemedText>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.filterBtn, 
-            { 
-              backgroundColor: filterTipo === "Deposito" ? colors.success : colors.backgroundLight,
-              borderColor: colors.border
-            }
-          ]}
-          onPress={() => setFilterTipo("Deposito")}
-        >
-          <ThemedText 
-            type="body2" 
-            style={{ 
-              color: filterTipo === "Deposito" ? colors.background : colors.text 
-            }}
-          >
-            {t('transactions.deposits')}
-          </ThemedText>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.filterBtn, 
-            { 
-              backgroundColor: filterTipo === "Transferencia" ? colors.error : colors.backgroundLight,
-              borderColor: colors.border
-            }
-          ]}
-          onPress={() => setFilterTipo("Transferencia")}
-        >
-          <ThemedText 
-            type="body2" 
-            style={{ 
-              color: filterTipo === "Transferencia" ? colors.background : colors.text 
-            }}
-          >
-            Transferências
-          </ThemedText>
-        </TouchableOpacity>
-      </ThemedView>
+      {/* Filters */}
+      <TransactionFilters
+        search={search}
+        filterTipo={filterTipo}
+        onSearchChange={setSearch}
+        onFilterChange={setFilterTipo}
+      />
 
       {/* 📜 Lista com Scroll Infinito */}
       <FlatList
@@ -435,146 +359,28 @@ export default function TabTwoScreen() {
 
       />
 
-      {/* Modal para visualizar Transacao */}
-      <Modal visible={!!selectedTransaction} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          {loading && (
-            <View style={styles.loadingOverlay}>
-              <ActivityIndicator size="large" color="#FFFFFF" />
-            </View>
-          )}
-          <ThemedView style={[styles.modalContent, { backgroundColor: colors.background }]}>
-            <ThemedView style={[styles.modalContentForm, { backgroundColor: colors.background }]}>
-              <ThemedText type="h1" style={{ color: colors.text, marginBottom: SPACING * 2 }}>
-                {(selectedTransaction && selectedTransaction.id != null) ? "Editar" : "Cadastrar"} Transação
-              </ThemedText>
-              <ThemedInput
-                label="Descricao"
-                placeholder="Informar Descricao"
-                value={selectedTransaction?.descricao}
-                onChangeText={(text) =>
-                  setSelectedTransaction((prev) => prev ? { ...prev, descricao: text } : null)
-                }
-                error={errorDescricao || ""}
-              />
-              <ThemedSelect
-                label="Tipo de Transação"
-                value={selectedTransaction?.tipo || "Deposito"}
-                onValueChange={(tipo) =>
-                  setSelectedTransaction((prev) =>
-                    prev
-                      ? {
-                        ...prev,
-                        tipo: tipo === "Deposito" ? "Deposito" : "Transferencia",
-                      }
-                      : null
-                  )
-                }
-                options={[
-                  { label: "Depósito", value: "Deposito" },
-                  { label: "Transferência", value: "Transferencia" },
-                ]}
-              />
+      {/* Transaction Modal */}
+      <TransactionModal
+        transaction={selectedTransaction}
+        loading={loading}
+        errorDescricao={errorDescricao}
+        errorValor={errorValor}
+        onClose={handleCloseModal}
+        onSave={handleSalvar}
+        onDelete={confirmDelete}
+        onUploadReceipt={handleUploadReceiptPress}
+        onTransactionChange={handleTransactionChange}
+      />
 
-              <ThemedCurrencyInput
-                label="Valor"
-                value={selectedTransaction?.valor || 0}
-                onChangeValue={(valor) =>
-                  setSelectedTransaction((prev) => prev ? { ...prev, valor: valor || 0 } : null)
-                }
-                error={errorValor || ""}
-              />
+      {/* Image Modal */}
+      <ImageModal
+        imageUri={selectedImagem}
+        visible={!!selectedImagem}
+        onClose={handleCloseImageModal}
+        onDeleteReceipt={handleDeleteReceiptPress}
+      />
 
-              {
-                selectedTransaction?.imagem ?
-                  (
-                    <TouchableOpacity
-                      style={styles.boxVisualizarAnexo}
-                      onPress={() => setSelectedImagem(selectedTransaction.imagem)}
-                    >
-                      <ThemedView style={[styles.boxVisualizarAnexoIcone, { backgroundColor: colors.primary }]}>
-                        <Ionicons name="attach" size={40} color="#FFF" style={{ marginRight: 0 }} />
-                      </ThemedView>
-                      <ThemedText type="body1" style={{ textAlign: "center", color: colors.text }}>
-                        Visualizar Comprovante
-                      </ThemedText>
-                    </TouchableOpacity>
-                  ) : (
-                    <TouchableOpacity
-                      style={styles.boxVisualizarAnexo}
-                      onPress={handleUploadComprovante}
-                    >
-                      <ThemedView style={[styles.boxVisualizarAnexoIcone, { backgroundColor: colors.primary }]}>
-                        <Ionicons name="attach" size={40} color="#FFF" style={{ marginRight: 0 }} />
-                      </ThemedView>
-                      <ThemedText type="body1" style={{ textAlign: "center", color: colors.text }}>
-                        Cadastrar Comprovante
-                      </ThemedText>
-                    </TouchableOpacity>
-                  )
-              }
-            </ThemedView>
-
-            <ThemedView style={styles.rowModelButton}>
-              <ThemedButton
-                title="Salvar"
-                onPress={handleSalvar}
-                variant="primary"
-                size="small"
-              />
-
-              {selectedTransaction?.id && (
-                <ThemedButton
-                  title="Excluir"
-                  onPress={() => confirmDelete(selectedTransaction!)}
-                  variant="delete"
-                  size="small"
-                />
-              )}
-
-              <ThemedButton
-                title="Voltar"
-                onPress={() => { setSelectedTransaction(null); setErrorDescricao(null); setErrorValor(null); }}
-                variant="secondary"
-                size="small"
-              />
-            </ThemedView>
-          </ThemedView>
-        </View>
-      </Modal>
-
-      {/* Modal para visualizar imagem */}
-      <Modal visible={!!selectedImagem} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <ThemedView style={[styles.modalContent, { backgroundColor: colors.background }]}>
-            {selectedImagem && (
-              <Image
-                source={{ uri: selectedImagem }}
-                style={styles.modalImage}
-                resizeMode="contain"
-              />
-            )}
-            <ThemedView style={styles.imageModalButtons}>
-              <ThemedButton
-                title="Fechar"
-                onPress={() => setSelectedImagem(undefined)}
-                variant="secondary"
-                size="small"
-              />
-              <ThemedButton
-                title="Excluir Comprovante"
-                onPress={() => confirmDeleteComprovante(selectedTransaction!)}
-                variant="delete"
-                size="small"
-              />
-            </ThemedView>
-          </ThemedView>
-        </View>
-      </Modal>
-
-      <TouchableOpacity style={[styles.buttonAddTransaction, { backgroundColor: colors.success }]} onPress={newTransaction}>
-        <Ionicons name="add" size={28} color="#fff" />
-      </TouchableOpacity>
+      <FloatingActionButton onPress={newTransaction} />
     </ThemedView>
   );
 }
@@ -582,32 +388,6 @@ export default function TabTwoScreen() {
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    paddingTop: 50, 
-  },
-  header: {
-    padding: SPACING * 2,
-    paddingBottom: SPACING,
-  },
-  searchContainer: {
-    paddingHorizontal: SPACING * 2,
-    marginBottom: SPACING,
-  },
-  searchInput: {
-    marginBottom: 0,
-  },
-  filterRow: { 
-    flexDirection: "row", 
-    justifyContent: "space-around", 
-    marginBottom: SPACING,
-    paddingHorizontal: SPACING * 2,
-    gap: SPACING,
-  },
-  filterBtn: {
-    flex: 1,
-    padding: SPACING,
-    borderWidth: 1,
-    borderRadius: 8,
-    alignItems: 'center',
   },
   loadingFooter: {
     paddingVertical: SPACING * 2,
@@ -615,113 +395,5 @@ const styles = StyleSheet.create({
   },
   endMessage: {
     paddingVertical: SPACING,
-  },
-  sectionTitle: {
-    marginBottom: SPACING,
-  },
-  card: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: SPACING,
-    marginHorizontal: SPACING * 2,
-    marginBottom: SPACING / 2,
-    borderRadius: 12,
-    borderWidth: 1,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  transactionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: SPACING,
-  },
-  transactionContent: {
-    flex: 1,
-  },
-  transactionValue: {
-    alignItems: 'flex-end',
-  },
-  valor: {
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  // Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.7)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalContent: {
-    padding: SPACING * 2,
-    borderRadius: 16,
-    alignItems: "center",
-    width: "90%",
-    maxHeight: "80%",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  modalContentForm: {
-    flexDirection: "column",
-    alignItems: "center",
-    width: "100%",
-    flex: 1,
-  },
-  boxVisualizarAnexo: {
-    flexDirection: "column",
-    alignItems: "center",
-    gap: SPACING,
-    width: 150,
-    marginVertical: SPACING,
-  },
-  boxVisualizarAnexoIcone: {
-    borderRadius: 25,
-    padding: SPACING,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  rowModelButton: {
-    width: "100%",
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: SPACING,
-    marginTop: SPACING,
-  },
-  modalImage: { width: "100%", height: "90%", borderRadius: 8 },
-  buttonAddTransaction: {
-    position: "absolute",
-    bottom: SPACING * 3,
-    right: SPACING * 3,
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 8,
-  },
-  loadingOverlay: {
-    ...StyleSheet.absoluteFillObject, // Posiciona sobre todo o modal
-    backgroundColor: 'rgba(0, 0, 0, 0.6)', // Fundo escuro semi-transparente para focar no spinner
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 10, // Garante que o spinner fique acima de todo o conteúdo
-  },
-  imageModalButtons: {
-    flexDirection: 'row',
-    gap: SPACING,
-    marginTop: SPACING,
   },
 });

@@ -1,39 +1,26 @@
-import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
-  Dimensions,
   ScrollView,
-  StyleSheet,
-  TouchableOpacity
+  StyleSheet
 } from 'react-native';
-import { LineChart } from 'react-native-chart-kit';
 
+import {
+  ChartData,
+  DashboardStats,
+  RecentTransactions,
+  StatsGrid,
+  TransactionChart
+} from '@/components/dashboard';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { PageTitle } from '@/components/ui';
 import { auth } from '@/config/firebase';
 import { Colors, SPACING } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useI18n } from '@/hooks/useI18n';
 import { getTransacoesPaginated, Transacao } from '@/services/firebase/transacoes';
-import { formatarData } from '@/utils/dateUtils';
-
-interface DashboardStats {
-  totalBalance: number;
-  totalDeposits: number;
-  totalTransfers: number;
-  transactionCount: number;
-}
-
-interface ChartData {
-  labels: string[];
-  datasets: {
-    data: number[];
-    color: () => string;
-    strokeWidth: number;
-  }[];
-}
 
 export default function HomeScreen() {
   const [transactions, setTransactions] = useState<Transacao[]>([]);
@@ -177,128 +164,16 @@ export default function HomeScreen() {
     }
   }, [loading, fadeAnim, slideAnim, scaleAnim]);
 
-  const StatCard = ({ 
-    title, 
-    value, 
-    icon, 
-    color, 
-    delay = 0 
-  }: { 
-    title: string; 
-    value: string; 
-    icon: keyof typeof Ionicons.glyphMap; 
-    color: string;
-    delay?: number;
-  }) => {
-    const cardAnim = useState(() => new Animated.Value(0))[0];
-
-    useEffect(() => {
-      if (!loading) {
-        Animated.timing(cardAnim, {
-          toValue: 1,
-          duration: 400,
-          delay,
-          useNativeDriver: true,
-        }).start();
-      }
-    }, [delay, cardAnim]);
-
-    return (
-      <Animated.View style={[
-        styles.statCard,
-        { 
-          backgroundColor: colors.backgroundLight,
-          opacity: cardAnim,
-          transform: [{
-            translateY: cardAnim.interpolate({
-              inputRange: [0, 1],
-              outputRange: [30, 0]
-            })
-          }]
-        }
-      ]}>
-        <ThemedView style={[styles.statIcon, { backgroundColor: color + '20' }]}>
-          <Ionicons name={icon} size={24} color={color} />
-        </ThemedView>
-        <ThemedView style={styles.statContent}>
-          <ThemedText type="body2" style={{ color: colors.textSecondary }}>
-            {title}
-          </ThemedText>
-          <ThemedText type="h2" style={{ color: color }}>
-            {value}
-          </ThemedText>
-        </ThemedView>
-      </Animated.View>
-    );
+  // Handle navigation to transactions tab
+  const handleViewAllTransactions = () => {
+    // This would navigate to the transactions tab
+    // You can implement router navigation here if needed
+    console.log('Navigate to transactions tab');
   };
 
-  const RecentTransactionItem = ({ 
-    transaction, 
-    index 
-  }: { 
-    transaction: Transacao; 
-    index: number 
-  }) => {
-    const itemAnim = useState(() => new Animated.Value(0))[0];
-
-    useEffect(() => {
-      if (!loading) {
-        Animated.timing(itemAnim, {
-          toValue: 1,
-          duration: 300,
-          delay: 100 + (index * 100),
-          useNativeDriver: true,
-        }).start();
-      }
-    }, [index, itemAnim]);
-
-    return (
-      <Animated.View style={[
-        styles.transactionItem,
-        { 
-          backgroundColor: colors.background,
-          opacity: itemAnim,
-          transform: [{
-            translateX: itemAnim.interpolate({
-              inputRange: [0, 1],
-              outputRange: [-50, 0]
-            })
-          }]
-        }
-      ]}>
-        <ThemedView style={[
-          styles.transactionIcon,
-          { 
-            backgroundColor: transaction.tipo === 'Deposito' 
-              ? colors.success + '20' 
-              : colors.error + '20' 
-          }
-        ]}>
-          <Ionicons 
-            name={transaction.tipo === 'Deposito' ? 'arrow-down' : 'arrow-up'} 
-            size={20} 
-            color={transaction.tipo === 'Deposito' ? colors.success : colors.error}
-          />
-        </ThemedView>
-        <ThemedView style={styles.transactionContent}>
-          <ThemedText type="body1" numberOfLines={1}>
-            {transaction.descricao}
-          </ThemedText>
-          <ThemedText type="body2" style={{ color: colors.textSecondary }}>
-            {formatarData(transaction.dataCriacao)}
-          </ThemedText>
-        </ThemedView>
-        <ThemedText 
-          type="body1" 
-          style={{ 
-            color: transaction.tipo === 'Deposito' ? colors.success : colors.error,
-            fontWeight: 'bold'
-          }}
-        >
-          {transaction.tipo === 'Deposito' ? '+' : '-'}R$ {transaction.valor.toFixed(2)}
-        </ThemedText>
-      </Animated.View>
-    );
+  const handleTransactionPress = (transaction: Transacao) => {
+    // Handle transaction item press
+    console.log('Transaction pressed:', transaction);
   };
 
   if (loading) {
@@ -314,170 +189,39 @@ export default function HomeScreen() {
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
-      <ThemedView style={styles.header}>
-        <Animated.View style={{
-          opacity: fadeAnim,
-          transform: [{ translateY: slideAnim }]
-        }}>
-          <ThemedText type="title" style={{ color: colors.text }}>
-            {t('dashboard.title')}
-          </ThemedText>
-          <ThemedText type="body1" style={{ color: colors.textSecondary, marginTop: 4 }}>
-            {t('dashboard.subtitle')}
-          </ThemedText>
-        </Animated.View>
-      </ThemedView>
+      <PageTitle
+        title={t('dashboard.title')}
+        subtitle={t('dashboard.subtitle')}
+        animated={true}
+        fadeAnim={fadeAnim}
+        slideAnim={slideAnim}
+      />
 
       {/* Stats Grid */}
-      <ThemedView style={styles.statsContainer}>
-        <StatCard
-          title={t('dashboard.totalBalance')}
-          value={`R$ ${stats.totalBalance.toFixed(2)}`}
-          icon="wallet"
-          color={stats.totalBalance >= 0 ? colors.success : colors.error}
-          delay={0}
-        />
-        <StatCard
-          title={t('dashboard.totalDeposits')}
-          value={`R$ ${stats.totalDeposits.toFixed(2)}`}
-          icon="arrow-down"
-          color={colors.success}
-          delay={100}
-        />
-        <StatCard
-          title={t('dashboard.totalTransfers')}
-          value={`R$ ${stats.totalTransfers.toFixed(2)}`}
-          icon="arrow-up"
-          color={colors.error}
-          delay={200}
-        />
-        <StatCard
-          title={t('dashboard.transactionCount')}
-          value={stats.transactionCount.toString()}
-          icon="list"
-          color={colors.primary}
-          delay={300}
-        />
-      </ThemedView>
+      <StatsGrid stats={stats} loading={loading} />
 
       {/* Chart Section */}
-      <Animated.View style={[
-        styles.section,
-        {
-          opacity: fadeAnim,
-          transform: [{ translateY: slideAnim }]
-        }
-      ]}>
-        <ThemedView style={styles.sectionHeader}>
-          <ThemedText type="h2" style={{ color: colors.text }}>
-            {t('dashboard.chartTitle')}
-          </ThemedText>
-        </ThemedView>
-        
-        {/* Chart Legend */}
-        <ThemedView style={styles.chartLegend}>
-          <ThemedView style={styles.legendItem}>
-            <ThemedView style={[styles.legendColor, { backgroundColor: colors.success }]} />
-            <ThemedText type="body2" style={{ color: colors.text }}>{t('transactions.deposits')}</ThemedText>
-          </ThemedView>
-          <ThemedView style={styles.legendItem}>
-            <ThemedView style={[styles.legendColor, { backgroundColor: colors.error }]} />
-            <ThemedText type="body2" style={{ color: colors.text }}>{t('transactions.transfers')}</ThemedText>
-          </ThemedView>
-        </ThemedView>
-
-        <ThemedView style={styles.chartContainer}>
-          {chartData.labels.length > 0 && chartData.datasets.length > 0 ? (
-            <LineChart
-              data={{
-                labels: chartData.labels,
-                datasets: chartData.datasets
-              }}
-              width={width - (SPACING * 4)} // from react-native
-              height={220}
-              yAxisLabel="R$ "
-              yAxisSuffix=""
-              yAxisInterval={1} // optional, defaults to 1
-              chartConfig={{
-                backgroundColor: colors.background,
-                backgroundGradientFrom: colors.background,
-                backgroundGradientTo: colors.backgroundLight,
-                decimalPlaces: 0, // optional, defaults to 2dp
-                color: (opacity = 1) => colors.textSecondary,
-                labelColor: (opacity = 1) => colors.text,
-                style: {
-                  borderRadius: 16
-                },
-                propsForDots: {
-                  r: "4",
-                  strokeWidth: "2",
-                }
-              }}
-              bezier
-              style={{
-                marginVertical: 8,
-                borderRadius: 16
-              }}
-            />
-          ) : (
-            <ThemedView style={styles.chartEmptyState}>
-              <Ionicons name="analytics-outline" size={48} color={colors.textDisabled} />
-              <ThemedText type="body1" style={{ color: colors.textSecondary, marginTop: SPACING, textAlign: 'center' }}>
-                {t('dashboard.chartEmptyState')}
-              </ThemedText>
-            </ThemedView>
-          )}
-        </ThemedView>
-      </Animated.View>
+      <TransactionChart 
+        chartData={chartData} 
+        fadeAnim={fadeAnim} 
+        slideAnim={slideAnim} 
+      />
 
       {/* Recent Transactions */}
-      <Animated.View style={[
-        styles.section,
-        {
-          opacity: fadeAnim,
-          transform: [{ scale: scaleAnim }]
-        }
-      ]}>
-        <ThemedView style={styles.sectionHeader}>
-          <ThemedText type="h2" style={{ color: colors.text }}>
-            {t('dashboard.recentTransactions')}
-          </ThemedText>
-          <TouchableOpacity>
-            <ThemedText type="body2" style={{ color: colors.primary }}>
-              {t('common.viewAll')}
-            </ThemedText>
-          </TouchableOpacity>
-        </ThemedView>
-
-        <ThemedView style={styles.transactionsList}>
-          {transactions.length > 0 ? (
-            transactions.map((transaction, index) => (
-              <RecentTransactionItem
-                key={transaction.id || index}
-                transaction={transaction}
-                index={index}
-              />
-            ))
-          ) : (
-            <ThemedView style={styles.emptyState}>
-              <Ionicons name="document-outline" size={48} color={colors.textDisabled} />
-              <ThemedText type="body1" style={{ color: colors.textSecondary, marginTop: SPACING }}>
-                {t('dashboard.noTransactionsFound')}
-              </ThemedText>
-            </ThemedView>
-          )}
-        </ThemedView>
-      </Animated.View>
+      <RecentTransactions
+        transactions={transactions}
+        loading={loading}
+        scaleAnim={scaleAnim}
+        onViewAllPress={handleViewAllTransactions}
+        onTransactionPress={handleTransactionPress}
+      />
     </ScrollView>
   );
 }
 
-const { width } = Dimensions.get('window');
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 50,
   },
   loadingContainer: {
     flex: 1,
@@ -488,98 +232,5 @@ const styles = StyleSheet.create({
   header: {
     padding: SPACING * 2,
     paddingBottom: SPACING,
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: SPACING,
-    gap: SPACING,
-  },
-  statCard: {
-    width: (width - SPACING * 3) / 2,
-    padding: SPACING * 1.5,
-    borderRadius: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  statIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: SPACING,
-  },
-  statContent: {
-    flex: 1,
-  },
-  section: {
-    marginTop: SPACING * 2,
-    paddingHorizontal: SPACING * 2,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: SPACING,
-  },
-  transactionsList: {
-    gap: SPACING / 2,
-  },
-  transactionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: SPACING,
-    borderRadius: 8,
-    marginBottom: SPACING / 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  transactionIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: SPACING,
-  },
-  transactionContent: {
-    flex: 1,
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: SPACING * 3,
-  },
-  chartContainer: {
-    alignItems: 'center',
-    paddingVertical: SPACING,
-  },
-  chartEmptyState: {
-    alignItems: 'center',
-    paddingVertical: SPACING * 2,
-  },
-  chartLegend: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: SPACING * 2,
-    marginBottom: SPACING,
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING / 2,
-  },
-  legendColor: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
   },
 });
