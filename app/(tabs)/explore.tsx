@@ -5,12 +5,13 @@ import { ThemedSelect } from "@/components/ui/ThemedSelect";
 import { auth } from "@/config/firebase";
 import { Colors, SPACING } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { pickAndUploadImage } from "@/services/firebase/pickAndUploadImage";
+import { deleteImageByUrl, pickAndUploadImage } from "@/services/firebase/pickAndUploadImage";
 import { addTransacao, deleteTransacao, getTransacoes, Transacao, updateTransacao } from "@/services/firebase/transacoes";
 import { formatarData } from "@/utils/dateUtils";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   FlatList,
   Image,
@@ -19,7 +20,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 
 const NEW_TRANSACTION: Transacao = {
@@ -89,16 +90,18 @@ export default function TabTwoScreen() {
     await loadData();
   };
 
-  async function handleUpload() {
+  async function handleUploadComprovante() {
+    
     const url = await pickAndUploadImage();
     if (!url) return;
 
+    setLoading(true);
     if (selectedTransaction) {
       const updatedTransaction = { ...selectedTransaction, imagem: url };
       setSelectedTransaction(updatedTransaction);
 
       if (updatedTransaction.id) {
-        setLoading(true);
+        
         try {
           await updateTransacao(updatedTransaction);
           loadData();
@@ -111,6 +114,7 @@ export default function TabTwoScreen() {
         }
       }
     }
+    setLoading(false);
   }
 
 
@@ -127,14 +131,44 @@ export default function TabTwoScreen() {
 
   async function handleDeleteTransaction(transactionId: string) {
     try {
-
+      setLoading(true);
       await deleteTransacao(transactionId);
       setSelectedTransaction(null);
       loadData();
+      setLoading(false);
       Alert.alert("Sucesso", "Transação excluída com sucesso!");
     } catch (error) {
       console.error("Erro ao excluir:", error);
       Alert.alert("Erro", "Não foi possível excluir a transação.");
+    }
+  }
+
+  function confirmDeleteComprovante(transacao: Transacao) {
+    Alert.alert(
+      "Confirmar exclusão",
+      "Deseja realmente excluir este comprovante?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        { text: "Excluir", style: "destructive", onPress: () => handleDeleteComprovante(transacao) }
+      ]
+    );
+  }
+
+  async function handleDeleteComprovante(transacao: Transacao) {
+    try {
+      if(transacao && transacao.imagem){
+        await deleteImageByUrl(transacao.imagem);
+        setSelectedImagem(undefined);
+        const updatedTransaction = { ...transacao, imagem: "" };
+        setSelectedTransaction(updatedTransaction);
+        if(updatedTransaction.id){
+          await updateTransacao(updatedTransaction);
+        }
+        Alert.alert("Sucesso", "Comprovante excluído com sucesso!");
+      }
+    } catch (error) {
+      console.error("Erro ao excluir:", error);
+      Alert.alert("Erro", "Não foi possível excluir a comprovante.");
     }
   }
 
@@ -224,6 +258,11 @@ export default function TabTwoScreen() {
       {/* Modal para visualizar Transacao */}
       <Modal visible={!!selectedTransaction} transparent animationType="fade">
         <View style={styles.modalOverlay}>
+          {loading && (
+            <View style={styles.loadingOverlay}>
+              <ActivityIndicator size="large" color="#FFFFFF" />
+            </View>
+          )}
           <View style={styles.modalContent}>
             <View style={styles.modalContentForm}>
               <ThemedText type="h1">{(selectedTransaction && selectedTransaction.id != null) ? "Editar" : "Cadastrar"} Transacao</ThemedText>
@@ -279,7 +318,7 @@ export default function TabTwoScreen() {
                 ):(
                   <TouchableOpacity 
                     style={styles.boxVisualizarAnexo}
-                    onPress={handleUpload}
+                    onPress={handleUploadComprovante}
                   >
                     <View style={styles.boxVisualizarAnexoIcone}>
                       <Ionicons name="attach" size={40} color="#FFF" style={{ marginRight: 0 }} />  
@@ -295,7 +334,6 @@ export default function TabTwoScreen() {
                 title="Salvar"
                 onPress={handleSalvar}
                 variant="primary"
-                loading={loading}
                 size="small"
               />
 
@@ -304,7 +342,6 @@ export default function TabTwoScreen() {
                   title="Excluir"
                   onPress={() => confirmDelete(selectedTransaction.id!)}
                   variant="delete"
-                  loading={loading}
                   size="small"
                 />
               )}
@@ -323,6 +360,8 @@ export default function TabTwoScreen() {
       {/* Modal para visualizar imagem */}
       <Modal visible={!!selectedImagem} transparent animationType="fade">
         <View style={styles.modalOverlay}>
+        {/* 1. Exibir o Loading Globalmente no Modal */}
+          
           <View style={styles.modalContent}>
             {selectedImagem && (
               <Image
@@ -335,6 +374,12 @@ export default function TabTwoScreen() {
               title="Fechar"
               onPress={() => setSelectedImagem(undefined)}
               variant="secondary"
+              size="small"
+            />
+            <ThemedButton
+              title="Excluir Comprovante"
+              onPress={() => confirmDeleteComprovante(selectedTransaction!)}
+              variant="delete"
               size="small"
             />
           </View>
@@ -447,5 +492,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 3,
     elevation: 5, // sombra Android
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject, // Posiciona sobre todo o modal
+    backgroundColor: 'rgba(0, 0, 0, 0.6)', // Fundo escuro semi-transparente para focar no spinner
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10, // Garante que o spinner fique acima de todo o conteúdo
   },
 });
