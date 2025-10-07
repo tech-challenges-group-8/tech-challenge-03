@@ -1,4 +1,5 @@
 import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
 import { ThemedButton, ThemedInput } from "@/components/ui";
 import { ThemedCurrencyInput } from "@/components/ui/ThemedCurrencyInput";
 import { ThemedSelect } from "@/components/ui/ThemedSelect";
@@ -17,8 +18,6 @@ import {
   Image,
   Modal,
   StyleSheet,
-  Text,
-  TextInput,
   TouchableOpacity,
   View
 } from "react-native";
@@ -264,25 +263,45 @@ export default function TabTwoScreen() {
 
   const renderItem = ({ item }: { item: Transacao }) => (
     <TouchableOpacity onPress={() => setSelectedTransaction(item)}>
-      <View style={styles.card}>
-        {/* Primeira linha -> descricao esquerda / tipo direita */}
-        <View style={styles.box1}>
-          <ThemedText type="h2">{item.descricao}</ThemedText>
-          <ThemedText type="body2">{formatarData(item.dataCriacao)} - {item.tipo}</ThemedText>
-        </View>
+      <ThemedView style={[styles.card, { backgroundColor: colors.background, borderColor: colors.border }]}>
+        {/* Transaction icon */}
+        <ThemedView style={[
+          styles.transactionIcon,
+          { 
+            backgroundColor: item.tipo === "Deposito" ? colors.success + '20' : colors.error + '20'
+          }
+        ]}>
+          <Ionicons 
+            name={item.tipo === "Deposito" ? "arrow-down" : "arrow-up"} 
+            size={20} 
+            color={item.tipo === "Deposito" ? colors.success : colors.error}
+          />
+        </ThemedView>
 
-        {/* Segunda linha -> valor direita */}
-        <View style={styles.box2}>
-          <Text
+        {/* Transaction content */}
+        <ThemedView style={styles.transactionContent}>
+          <ThemedText type="h2" style={{ color: colors.text }}>{item.descricao}</ThemedText>
+          <ThemedText type="body2" style={{ color: colors.textSecondary }}>
+            {formatarData(item.dataCriacao)} - {item.tipo}
+          </ThemedText>
+        </ThemedView>
+
+        {/* Transaction value */}
+        <ThemedView style={styles.transactionValue}>
+          <ThemedText
+            type="body1"
             style={[
               styles.valor,
-              item.tipo === "Deposito" ? styles.valorPositivo : styles.valorNegativo
+              { 
+                color: item.tipo === "Deposito" ? colors.success : colors.error,
+                fontWeight: 'bold'
+              }
             ]}
           >
-            R$ {item.valor.toFixed(2)}
-          </Text>
-        </View>
-      </View>
+            {item.tipo === "Deposito" ? "+" : "-"}R$ {item.valor.toFixed(2)}
+          </ThemedText>
+        </ThemedView>
+      </ThemedView>
     </TouchableOpacity>
   );
 
@@ -290,35 +309,87 @@ export default function TabTwoScreen() {
   const colors = Colors[colorScheme];
 
   return (
-    <View style={styles.container}>
-      {/* 🔎 Filtro */}
-      <TextInput
-        style={styles.input}
-        placeholder="Filtrar por descrição..."
-        value={search}
-        onChangeText={setSearch}
-      />
+    <ThemedView style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Header */}
+      <ThemedView style={styles.header}>
+        <ThemedText type="title" style={{ color: colors.text }}>
+          Transações
+        </ThemedText>
+        <ThemedText type="body1" style={{ color: colors.textSecondary, marginTop: 4 }}>
+          Gerencie suas transações financeiras
+        </ThemedText>
+      </ThemedView>
 
-      <View style={styles.filterRow}>
+      {/* 🔎 Filtro */}
+      <ThemedView style={styles.searchContainer}>
+        <ThemedInput
+          label=""
+          placeholder="Filtrar por descrição..."
+          value={search}
+          onChangeText={setSearch}
+          style={styles.searchInput}
+        />
+      </ThemedView>
+
+      <ThemedView style={styles.filterRow}>
         <TouchableOpacity
-          style={[styles.filterBtn, filterTipo === null && styles.active]}
+          style={[
+            styles.filterBtn, 
+            { 
+              backgroundColor: filterTipo === null ? colors.primary : colors.backgroundLight,
+              borderColor: colors.border
+            }
+          ]}
           onPress={() => setFilterTipo(null)}
         >
-          <Text>Todos</Text>
+          <ThemedText 
+            type="body2" 
+            style={{ 
+              color: filterTipo === null ? colors.background : colors.text 
+            }}
+          >
+            Todos
+          </ThemedText>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.filterBtn, filterTipo === "Deposito" && styles.active]}
+          style={[
+            styles.filterBtn, 
+            { 
+              backgroundColor: filterTipo === "Deposito" ? colors.success : colors.backgroundLight,
+              borderColor: colors.border
+            }
+          ]}
           onPress={() => setFilterTipo("Deposito")}
         >
-          <Text>Depósitos</Text>
+          <ThemedText 
+            type="body2" 
+            style={{ 
+              color: filterTipo === "Deposito" ? colors.background : colors.text 
+            }}
+          >
+            Depósitos
+          </ThemedText>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.filterBtn, filterTipo === "Transferencia" && styles.active]}
+          style={[
+            styles.filterBtn, 
+            { 
+              backgroundColor: filterTipo === "Transferencia" ? colors.error : colors.backgroundLight,
+              borderColor: colors.border
+            }
+          ]}
           onPress={() => setFilterTipo("Transferencia")}
         >
-          <Text>Transferências</Text>
+          <ThemedText 
+            type="body2" 
+            style={{ 
+              color: filterTipo === "Transferencia" ? colors.background : colors.text 
+            }}
+          >
+            Transferências
+          </ThemedText>
         </TouchableOpacity>
-      </View>
+      </ThemedView>
 
       {/* 📜 Lista com Scroll Infinito */}
       <FlatList
@@ -336,16 +407,21 @@ export default function TabTwoScreen() {
         // 🆕 NOVO: Indicador de carregamento no rodapé
         ListFooterComponent={
           loading && hasMore ? (
-            <ActivityIndicator
-              size="small"
-              color={colors.primary}
-              style={{ marginVertical: SPACING }}
-            />
+            <ThemedView style={styles.loadingFooter}>
+              <ActivityIndicator
+                size="small"
+                color={colors.primary}
+              />
+            </ThemedView>
           ) : (
             // Mensagem para quando não há mais dados (opcional)
-            <Text style={{ textAlign: "center", marginVertical: SPACING, color: colors.text }}>
-              {data.length > 0 && !loading && !hasMore ? 'Fim da lista' : null}
-            </Text>
+            <ThemedView style={styles.endMessage}>
+              {data.length > 0 && !loading && !hasMore ? (
+                <ThemedText type="body2" style={{ textAlign: "center", color: colors.textSecondary }}>
+                  Fim da lista
+                </ThemedText>
+              ) : null}
+            </ThemedView>
           )
         }
         // Opcional: Adicionar "Puxar para Atualizar" (Pull-to-Refresh)
@@ -365,9 +441,11 @@ export default function TabTwoScreen() {
               <ActivityIndicator size="large" color="#FFFFFF" />
             </View>
           )}
-          <View style={styles.modalContent}>
-            <View style={styles.modalContentForm}>
-              <ThemedText type="h1">{(selectedTransaction && selectedTransaction.id != null) ? "Editar" : "Cadastrar"} Transacao</ThemedText>
+          <ThemedView style={[styles.modalContent, { backgroundColor: colors.background }]}>
+            <ThemedView style={[styles.modalContentForm, { backgroundColor: colors.background }]}>
+              <ThemedText type="h1" style={{ color: colors.text, marginBottom: SPACING * 2 }}>
+                {(selectedTransaction && selectedTransaction.id != null) ? "Editar" : "Cadastrar"} Transação
+              </ThemedText>
               <ThemedInput
                 label="Descricao"
                 placeholder="Informar Descricao"
@@ -412,26 +490,30 @@ export default function TabTwoScreen() {
                       style={styles.boxVisualizarAnexo}
                       onPress={() => setSelectedImagem(selectedTransaction.imagem)}
                     >
-                      <View style={styles.boxVisualizarAnexoIcone}>
+                      <ThemedView style={[styles.boxVisualizarAnexoIcone, { backgroundColor: colors.primary }]}>
                         <Ionicons name="attach" size={40} color="#FFF" style={{ marginRight: 0 }} />
-                      </View>
-                      <ThemedText type="body1" style={{ textAlign: "center" }}>Visualizar Comprovante</ThemedText>
+                      </ThemedView>
+                      <ThemedText type="body1" style={{ textAlign: "center", color: colors.text }}>
+                        Visualizar Comprovante
+                      </ThemedText>
                     </TouchableOpacity>
                   ) : (
                     <TouchableOpacity
                       style={styles.boxVisualizarAnexo}
                       onPress={handleUploadComprovante}
                     >
-                      <View style={styles.boxVisualizarAnexoIcone}>
+                      <ThemedView style={[styles.boxVisualizarAnexoIcone, { backgroundColor: colors.primary }]}>
                         <Ionicons name="attach" size={40} color="#FFF" style={{ marginRight: 0 }} />
-                      </View>
-                      <ThemedText type="body1" style={{ textAlign: "center" }}>Cadastrar Comprovante</ThemedText>
+                      </ThemedView>
+                      <ThemedText type="body1" style={{ textAlign: "center", color: colors.text }}>
+                        Cadastrar Comprovante
+                      </ThemedText>
                     </TouchableOpacity>
                   )
               }
-            </View>
+            </ThemedView>
 
-            <View style={styles.rowModelButton}>
+            <ThemedView style={styles.rowModelButton}>
               <ThemedButton
                 title="Salvar"
                 onPress={handleSalvar}
@@ -454,17 +536,15 @@ export default function TabTwoScreen() {
                 variant="secondary"
                 size="small"
               />
-            </View>
-          </View>
+            </ThemedView>
+          </ThemedView>
         </View>
       </Modal>
 
       {/* Modal para visualizar imagem */}
       <Modal visible={!!selectedImagem} transparent animationType="fade">
         <View style={styles.modalOverlay}>
-          {/* 1. Exibir o Loading Globalmente no Modal */}
-
-          <View style={styles.modalContent}>
+          <ThemedView style={[styles.modalContent, { backgroundColor: colors.background }]}>
             {selectedImagem && (
               <Image
                 source={{ uri: selectedImagem }}
@@ -472,72 +552,102 @@ export default function TabTwoScreen() {
                 resizeMode="contain"
               />
             )}
-            <ThemedButton
-              title="Fechar"
-              onPress={() => setSelectedImagem(undefined)}
-              variant="secondary"
-              size="small"
-            />
-            <ThemedButton
-              title="Excluir Comprovante"
-              onPress={() => confirmDeleteComprovante(selectedTransaction!)}
-              variant="delete"
-              size="small"
-            />
-          </View>
+            <ThemedView style={styles.imageModalButtons}>
+              <ThemedButton
+                title="Fechar"
+                onPress={() => setSelectedImagem(undefined)}
+                variant="secondary"
+                size="small"
+              />
+              <ThemedButton
+                title="Excluir Comprovante"
+                onPress={() => confirmDeleteComprovante(selectedTransaction!)}
+                variant="delete"
+                size="small"
+              />
+            </ThemedView>
+          </ThemedView>
         </View>
       </Modal>
 
       <TouchableOpacity style={[styles.buttonAddTransaction, { backgroundColor: colors.success }]} onPress={newTransaction}>
         <Ionicons name="add" size={28} color="#fff" />
       </TouchableOpacity>
-    </View>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, paddingTop: 55, backgroundColor: "#fff" },
-  input: {
-    borderWidth: 1, borderColor: "#ccc", padding: 8, borderRadius: 8, marginBottom: 10,
+  container: { 
+    flex: 1, 
+    paddingTop: 50, 
   },
-  filterRow: { flexDirection: "row", justifyContent: "space-around", marginBottom: 10 },
+  header: {
+    padding: SPACING * 2,
+    paddingBottom: SPACING,
+  },
+  searchContainer: {
+    paddingHorizontal: SPACING * 2,
+    marginBottom: SPACING,
+  },
+  searchInput: {
+    marginBottom: 0,
+  },
+  filterRow: { 
+    flexDirection: "row", 
+    justifyContent: "space-around", 
+    marginBottom: SPACING,
+    paddingHorizontal: SPACING * 2,
+    gap: SPACING,
+  },
   filterBtn: {
-    padding: 8, borderWidth: 1, borderRadius: 6, borderColor: "#aaa",
+    flex: 1,
+    padding: SPACING,
+    borderWidth: 1,
+    borderRadius: 8,
+    alignItems: 'center',
   },
-  active: { backgroundColor: "#ddd" },
+  loadingFooter: {
+    paddingVertical: SPACING * 2,
+    alignItems: 'center',
+  },
+  endMessage: {
+    paddingVertical: SPACING,
+  },
   sectionTitle: {
     marginBottom: SPACING,
   },
   card: {
-    padding: 12,
-    marginBottom: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    padding: SPACING,
+    marginHorizontal: SPACING * 2,
+    marginBottom: SPACING / 2,
+    borderRadius: 12,
     borderWidth: 1,
-    borderRadius: 8,
-    borderColor: "#ccc",
-    backgroundColor: "#fafafa",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    flexWrap: "wrap"
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  box1: {
-    width: "70%",
+  transactionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: SPACING,
   },
-  box2: {
-    width: "30%",
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    alignItems: "center"
+  transactionContent: {
+    flex: 1,
+  },
+  transactionValue: {
+    alignItems: 'flex-end',
   },
   valor: {
     fontSize: 16,
     fontWeight: "bold",
-
-  },
-  valorPositivo: {
-    color: "#2a9d8f",
-  },
-  valorNegativo: {
-    color: "#9d2a2aff",
   },
   // Modal
   modalOverlay: {
@@ -547,53 +657,58 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   modalContent: {
-    backgroundColor: "#FFF",
-    padding: 10,
-    borderRadius: 8,
+    padding: SPACING * 2,
+    borderRadius: 16,
     alignItems: "center",
     width: "90%",
-    height: "70%",
+    maxHeight: "80%",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   modalContentForm: {
-    backgroundColor: "#FFF",
     flexDirection: "column",
     alignItems: "center",
     width: "100%",
-    height: "93%",
+    flex: 1,
   },
   boxVisualizarAnexo: {
     flexDirection: "column",
     alignItems: "center",
-    gap: 10,
+    gap: SPACING,
     width: 150,
+    marginVertical: SPACING,
   },
   boxVisualizarAnexoIcone: {
-    backgroundColor: "#555",
-    borderRadius: "100%",
-    padding: 7
+    borderRadius: 25,
+    padding: SPACING,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   rowModelButton: {
     width: "100%",
     flexDirection: "row",
     justifyContent: "flex-end",
-    paddingRight: 5,
-    gap: 10
+    gap: SPACING,
+    marginTop: SPACING,
   },
   modalImage: { width: "100%", height: "90%", borderRadius: 8 },
   buttonAddTransaction: {
     position: "absolute",
-    bottom: 24,
-    right: 24,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    bottom: SPACING * 3,
+    right: SPACING * 3,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     justifyContent: "center",
     alignItems: "center",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 3,
-    elevation: 5, // sombra Android
+    shadowRadius: 6,
+    elevation: 8,
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject, // Posiciona sobre todo o modal
@@ -601,5 +716,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10, // Garante que o spinner fique acima de todo o conteúdo
+  },
+  imageModalButtons: {
+    flexDirection: 'row',
+    gap: SPACING,
+    marginTop: SPACING,
   },
 });
