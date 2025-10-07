@@ -45,47 +45,61 @@ export default function TabTwoScreen() {
   const [lastTransaction, setLastTransaction] = useState<any>(null);
   // 🆕 NOVO: Estado para saber se não há mais dados para buscar
   const [hasMore, setHasMore] = useState(true);
+  // Flag to prevent initial load from running multiple times
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
 
   const user = auth.currentUser;
 
   const PAGE_SIZE = 15; // Certifique-se de que está definida e importada
 
+  // Wrap loadData in useCallback but manage dependencies properly
   const loadData = useCallback(async (refresh = false) => {
-
-    if (loading) return;
     if (!user) return;
 
-    // Se for refresh: 1. Reseta os estados de controle. 2. Continua a execução.
-    // Se não for refresh: 3. Checa se tem mais. Se não tiver, sai.
-    if (refresh) {
-      // 🚀 OBRIGATÓRIO: Força o reset para reativar o scroll infinito
-      setData([]);
-      setLastTransaction(null);
-      setHasMore(true);
-    } else if (!hasMore) {
-      // Bloqueia a paginação se já soubermos que não há mais dados (e não é refresh)
-      return;
-    }
+    // Prevent concurrent calls
+    if (loading) return;
 
     setLoading(true);
 
-    const startAfterItem = refresh ? null : lastTransaction;
-
     try {
+      let startAfterItem = null;
+      
+      if (refresh) {
+        // Reset all states for refresh
+        setData([]);
+        setLastTransaction(null);
+        setHasMore(true);
+        startAfterItem = null;
+      } else {
+        // Use current lastTransaction state
+        startAfterItem = lastTransaction;
+        
+        // If we know there's no more data, don't make the call
+        if (!hasMore) {
+          setLoading(false);
+          return;
+        }
+      }
+
       const { transacoes, lastItem } = await getTransacoesPaginated(startAfterItem);
 
       // Determina se é a última página (usando PAGE_SIZE = 15)
-      if (transacoes.length < PAGE_SIZE) {
-        setHasMore(false);
-      } else {
-        // Se trouxe a página inteira, ainda pode haver mais
-        setHasMore(true);
-      }
+      const isLastPage = transacoes.length < PAGE_SIZE;
+      
+      setHasMore(!isLastPage);
 
       if (transacoes.length > 0) {
-        // Anexa os novos dados à lista (que foi limpa se era refresh)
-        setData((prevData) => (refresh ? transacoes : [...prevData, ...transacoes]));
+        // Anexa os novos dados à lista
+        if (refresh) {
+          setData(transacoes);
+        } else {
+          setData((prevData) => [...prevData, ...transacoes]);
+        }
         setLastTransaction(lastItem);
+      } else if (refresh) {
+        // If refresh returns no data, ensure we have empty state
+        setData([]);
+        setLastTransaction(null);
       }
 
     } catch (error) {
@@ -94,14 +108,15 @@ export default function TabTwoScreen() {
     } finally {
       setLoading(false);
     }
+  }, [user, lastTransaction, hasMore, loading]);
 
-  }, [user, hasMore, lastTransaction]); // Mantenha as dependências limpas
-
+  // Initial load effect - only run once when user is available
   useEffect(() => {
-    if (user && data.length === 0 && !loading) {
+    if (user && !initialLoadDone && !loading) {
+      setInitialLoadDone(true);
       loadData(true);
     }
-  }, [user, loading, data.length, loadData]);
+  }, [user, initialLoadDone, loading, loadData]);
 
   const handleSalvar = async () => {
     if (!selectedTransaction) return;
@@ -135,6 +150,7 @@ export default function TabTwoScreen() {
 
     setLoading(false);
     setSelectedTransaction(null);
+    setInitialLoadDone(false); // Reset to allow fresh data load
     await loadData(true);
   };
 
@@ -156,6 +172,7 @@ export default function TabTwoScreen() {
 
         try {
           await updateTransacao(updatedTransaction);
+          setInitialLoadDone(false); // Reset to allow fresh data load
           loadData(true);
           Alert.alert("Sucesso", "Comprovante cadastrado com sucesso!");
         } catch (error) {
@@ -191,6 +208,7 @@ export default function TabTwoScreen() {
         await deleteImageByUrl(transacao.imagem);
       }
       setSelectedTransaction(null);
+      setInitialLoadDone(false); // Reset to allow fresh data load
       loadData(true);
       setLoading(false);
       Alert.alert("Sucesso", "Transação excluída com sucesso!");
@@ -308,7 +326,11 @@ export default function TabTwoScreen() {
         keyExtractor={(item) => item.id ?? ""}
         renderItem={renderItem}
         // ⚠️ Só chama se NÃO estiver carregando e houver mais dados
-        onEndReached={!loading && hasMore ? () => loadData(false) : null}
+        onEndReached={() => {
+          if (!loading && hasMore) {
+            loadData(false);
+          }
+        }}
         onEndReachedThreshold={0.2}
 
         // 🆕 NOVO: Indicador de carregamento no rodapé
@@ -328,7 +350,10 @@ export default function TabTwoScreen() {
         }
         // Opcional: Adicionar "Puxar para Atualizar" (Pull-to-Refresh)
         refreshing={loading && data.length === 0} // Mostra o loader de refresh se for o carregamento inicial
-        onRefresh={() => loadData(true)} // Puxa para recarregar tudo
+        onRefresh={() => {
+          setInitialLoadDone(false); // Allow refresh to reset initial load flag
+          loadData(true);
+        }} // Puxa para recarregar tudo
 
       />
 
