@@ -342,10 +342,10 @@ export default function TabTwoScreen() {
           )}
           <View style={styles.modalContent}>
             <View style={styles.modalContentForm}>
-              <ThemedText type="h1">{(selectedTransaction && selectedTransaction.id != null) ? "Editar" : "Cadastrar"} Transacao</ThemedText>
+              <ThemedText type="h1">{(selectedTransaction && selectedTransaction.id != null) ? "Editar" : "Cadastrar"} Transação</ThemedText>
               <ThemedInput
-                label="Descricao"
-                placeholder="Informar Descricao"
+                label="Descrição"
+                placeholder="Informar Descrição"
                 value={selectedTransaction?.descricao}
                 onChangeText={(text) =>
                   setSelectedTransaction((prev) => prev ? { ...prev, descricao: text } : null)
@@ -447,18 +447,21 @@ export default function TabTwoScreen() {
                 resizeMode="contain"
               />
             )}
-            <ThemedButton
-              title="Fechar"
-              onPress={() => setSelectedImagem(undefined)}
-              variant="secondary"
-              size="small"
-            />
-            <ThemedButton
-              title="Excluir Comprovante"
-              onPress={() => confirmDeleteComprovante(selectedTransaction!)}
-              variant="delete"
-              size="small"
-            />
+            <View style={styles.rowModelImagemButton}>
+              <ThemedButton
+                title="Fechar"
+                onPress={() => setSelectedImagem(undefined)}
+                variant="secondary"
+                size="small"
+              />
+              <ThemedButton
+                title="Excluir Comprovante"
+                onPress={() => confirmDeleteComprovante(selectedTransaction!)}
+                variant="delete"
+                size="small"
+              />
+            </View>
+            
           </View>
         </View>
       </Modal>
@@ -551,6 +554,14 @@ const styles = StyleSheet.create({
     width: "100%",
     flexDirection: "row",
     justifyContent: "flex-end",
+    paddingRight: 5,
+    gap: 10
+  },
+  rowModelImagemButton: {
+    width: "100%",
+    flexDirection: "row",
+    justifyContent: "center",
+    marginTop: 10,
     paddingRight: 5,
     gap: 10
   },
