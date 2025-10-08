@@ -33,7 +33,6 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      "expo-dev-client",
       "expo-router",
       [
         "expo-splash-screen",
@@ -46,12 +45,10 @@
             "backgroundColor": "#000000"
           }
         }
-      ],
-      "@react-native-firebase/app"
+      ]
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+      "typedRoutes": true
     },
     "updates": {
       "enabled": false

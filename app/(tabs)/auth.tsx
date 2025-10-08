@@ -1,12 +1,25 @@
-import { UserProfile } from '@/components/auth/UserProfile';
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet } from 'react-native';
+
+import { UserProfile } from '@/components/auth/UserProfile';
+import { PageTitle } from '@/components/ui';
+import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useI18n } from '@/hooks/useI18n';
 
 export default function ProfileTab() {
+  const colorScheme = useColorScheme() ?? 'light';
+  const colors = Colors[colorScheme];
+  const { t } = useI18n();
+
   return (
-    <View style={styles.container}>
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
+      <PageTitle
+        title={t('auth.profile')}
+        subtitle={t('profile.manageAccount')}
+      />
       <UserProfile />
-    </View>
+    </ScrollView>
   );
 }
 
