@@ -19,6 +19,7 @@ import { PageTitle } from "@/components/ui";
 import { auth } from "@/config/firebase";
 import { Colors, SPACING } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { triggerDashboardRefresh } from "@/hooks/useDashboardRefresh";
 import { useI18n } from "@/hooks/useI18n";
 import { deleteImageByUrl, pickAndUploadImage } from "@/services/firebase/pickAndUploadImage";
 import { addTransacao, deleteTransacao, getTransacoesPaginated, Transacao, updateTransacao } from "@/services/firebase/transacoes";
@@ -135,6 +136,8 @@ export default function TabTwoScreen() {
     if (selectedTransaction.id) {
       try {
         await updateTransacao(selectedTransaction);
+        // Trigger dashboard refresh when transaction is updated
+        triggerDashboardRefresh();
       } catch (error) {
         console.error("Erro ao atualizar:", error);
         Alert.alert("Erro", "Não foi possível atualizar a transação.");
@@ -142,6 +145,8 @@ export default function TabTwoScreen() {
     } else {
       try {
         await addTransacao(selectedTransaction);
+        // Trigger dashboard refresh when new transaction is added
+        triggerDashboardRefresh();
       } catch (error) {
         console.error("Erro ao cadastrar:", error);
         Alert.alert("Erro", "Não foi possível cadastrar a transação.");
@@ -172,6 +177,8 @@ export default function TabTwoScreen() {
 
         try {
           await updateTransacao(updatedTransaction);
+          // Trigger dashboard refresh when receipt is uploaded
+          triggerDashboardRefresh();
           setInitialLoadDone(false); // Reset to allow fresh data load
           loadData(true);
           Alert.alert("Sucesso", "Comprovante cadastrado com sucesso!");
@@ -207,6 +214,8 @@ export default function TabTwoScreen() {
       if (transacao.imagem) {
         await deleteImageByUrl(transacao.imagem);
       }
+      // Trigger dashboard refresh when transaction is deleted
+      triggerDashboardRefresh();
       setSelectedTransaction(null);
       setInitialLoadDone(false); // Reset to allow fresh data load
       loadData(true);
@@ -238,6 +247,8 @@ export default function TabTwoScreen() {
         setSelectedTransaction(updatedTransaction);
         if (updatedTransaction.id) {
           await updateTransacao(updatedTransaction);
+          // Trigger dashboard refresh when receipt is deleted
+          triggerDashboardRefresh();
         }
         Alert.alert("Sucesso", "Comprovante excluído com sucesso!");
       }

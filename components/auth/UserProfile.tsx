@@ -1,20 +1,18 @@
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 import React from 'react';
-import { useTranslation } from 'react-i18next';
-import {
-  Alert,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import { useAuth } from '../../contexts/AuthContext';
-import { AuthService } from '../../services/AuthService';
+import { Alert, StyleSheet } from 'react-native';
+
+import { ThemedView } from '@/components/themed-view';
+import { ThemedButton } from '@/components/ui';
+import { Colors, SPACING } from '@/constants/theme';
+import { useAuth } from '@/contexts/AuthContext';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useI18n } from '@/hooks/useI18n';
+import { AuthService } from '@/services/AuthService';
+import { formatarData } from '@/utils/dateUtils';
+import { ProfileInfoCard } from './ProfileInfoCard';
 
 export const UserProfile: React.FC = () => {
-  const { t } = useTranslation();
+  const { t } = useI18n();
   const { user } = useAuth();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
@@ -33,49 +31,56 @@ export const UserProfile: React.FC = () => {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.backgroundLight }]}>
-      <View style={[styles.profile, { backgroundColor: colors.background }]}>
-        <Text style={[styles.title, { color: colors.text }]}>
-          {t('auth.profile')}
-        </Text>
-        
-        <View style={styles.infoSection}>
-          <Text style={[styles.label, { color: colors.textSecondary }]}>
-            {t('profile.displayName')}
-          </Text>
-          <Text style={[styles.value, { color: colors.text }]}>
-            {user?.displayName || t('profile.notSet')}
-          </Text>
-        </View>
-        
-        <View style={styles.infoSection}>
-          <Text style={[styles.label, { color: colors.textSecondary }]}>
-            {t('profile.email')}
-          </Text>
-          <Text style={[styles.value, { color: colors.text }]}>
-            {user?.email}
-          </Text>
-        </View>
-        
-        <View style={styles.infoSection}>
-          <Text style={[styles.label, { color: colors.textSecondary }]}>
-            {t('profile.emailVerified')}
-          </Text>
-          <Text style={[styles.value, { color: colors.text }]}>
-            {user?.emailVerified ? t('profile.yes') : t('profile.no')}
-          </Text>
-        </View>
-        
-        <TouchableOpacity 
-          style={[styles.logoutButton, { backgroundColor: colors.error }]} 
+    <ThemedView style={styles.container}>
+      <ThemedView
+        style={[styles.profile, { backgroundColor: colors.background }]}
+      >
+        <ProfileInfoCard
+          label={t("profile.displayName")}
+          value={user?.displayName || t("profile.notSet")}
+        />
+
+        <ProfileInfoCard
+          label={t("profile.email")}
+          value={user?.email || t("profile.notProvided")}
+        />
+
+        <ProfileInfoCard
+          label={t("profile.emailVerified")}
+          value={user?.emailVerified ? t("profile.yes") : t("profile.no")}
+        />
+
+        <ProfileInfoCard
+          label={t("profile.accountCreated")}
+          value={
+            user?.metadata?.creationTime
+              ? formatarData(user.metadata.creationTime)
+              : t("profile.notProvided")
+          }
+        />
+
+        <ProfileInfoCard
+          label={t("profile.lastAccess")}
+          value={
+            user?.metadata?.lastSignInTime
+              ? formatarData(user.metadata.lastSignInTime)
+              : t("profile.notProvided")
+          }
+          isLast={true}
+        />
+      </ThemedView>
+
+      <ThemedView
+        style={[styles.logoutSection, { backgroundColor: colors.background }]}
+      >
+        <ThemedButton
+          title={t("auth.logout")}
           onPress={handleLogout}
-        >
-          <Text style={styles.logoutButtonText}>
-            {t('auth.logout')}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+          variant="delete"
+          size="large"
+        />
+      </ThemedView>
+    </ThemedView>
   );
 };
 
@@ -84,48 +89,32 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   profile: {
-    margin: 20,
-    padding: 20,
-    borderRadius: 10,
+    margin: SPACING,
+    padding: SPACING * 1.5,
+    borderRadius: 12,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 30,
+  logoutSection: {
+    margin: SPACING,
+    padding: SPACING * 1.5,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   infoSection: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 5,
+    marginBottom: SPACING,
+    paddingBottom: SPACING,
+    borderBottomWidth: 1,
   },
   value: {
-    fontSize: 16,
-  },
-  valueSmall: {
-    fontSize: 12,
-    fontFamily: 'monospace',
-  },
-  logoutButton: {
-    padding: 15,
-    borderRadius: 8,
-    marginTop: 20,
-  },
-  logoutButtonText: {
-    color: 'white',
-    textAlign: 'center',
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
+    marginTop: 4,
   },
 });

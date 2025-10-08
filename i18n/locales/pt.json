@@ -24,9 +24,13 @@
     "email": "E-mail:",
     "emailVerified": "E-mail Verificado:",
     "userId": "ID do Usuário:",
+    "accountCreated": "Conta Criada:",
+    "lastAccess": "Último Acesso:",
     "notSet": "Não definido",
+    "notProvided": "Não informado",
     "yes": "Sim",
-    "no": "Não"
+    "no": "Não",
+    "manageAccount": "Gerencie sua conta e configurações"
   },
   "messages": {
     "error": "Erro",
@@ -64,6 +68,7 @@
     "title": "Dashboard",
     "subtitle": "Visão geral das suas transações",
     "loadingMessage": "Carregando dashboard...",
+    "pullToRefresh": "Puxe para atualizar",
     "totalBalance": "Saldo Total",
     "totalDeposits": "Total Depósitos",
     "totalTransfers": "Total Transferências",

@@ -1,7 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import { router } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
+  RefreshControl,
   ScrollView,
   StyleSheet
 } from 'react-native';
@@ -19,6 +22,7 @@ import { PageTitle } from '@/components/ui';
 import { auth } from '@/config/firebase';
 import { Colors, SPACING } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useDashboardRefresh } from '@/hooks/useDashboardRefresh';
 import { useI18n } from '@/hooks/useI18n';
 import { getTransacoesPaginated, Transacao } from '@/services/firebase/transacoes';
 
@@ -35,6 +39,9 @@ export default function HomeScreen() {
     datasets: []
   });
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastRefreshTime, setLastRefreshTime] = useState<number>(0);
+  const [selectedTransaction, setSelectedTransaction] = useState<Transacao | null>(null);
 
   // Animation values
   const fadeAnim = useState(() => new Animated.Value(0))[0];
@@ -46,11 +53,18 @@ export default function HomeScreen() {
   const user = auth.currentUser;
   const { t } = useI18n();
 
-  const loadDashboardData = React.useCallback(async () => {
+  // Dashboard refresh functionality
+  const { subscribe } = useDashboardRefresh(() => loadDashboardData(true));
+
+  const loadDashboardData = useCallback(async (isRefresh = false) => {
     if (!user) return;
 
     try {
-      setLoading(true);
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
       const { transacoes } = await getTransacoesPaginated(null);
       
       // Calculate stats
@@ -132,13 +146,39 @@ export default function HomeScreen() {
     } catch (error) {
       console.error('Erro ao carregar dados do dashboard:', error);
     } finally {
-      setLoading(false);
+      if (isRefresh) {
+        setRefreshing(false);
+      } else {
+        setLoading(false);
+      }
+      setLastRefreshTime(Date.now());
     }
   }, [user, colors.success, colors.error]);
 
   useEffect(() => {
     loadDashboardData();
   }, [loadDashboardData]);
+
+  // Subscribe to dashboard refresh events
+  useEffect(() => {
+    return subscribe();
+  }, [subscribe]);
+
+  // Refresh data when the screen comes into focus (when user switches tabs)
+  // Only refresh if it's been more than 1 minute since last refresh
+  useFocusEffect(
+    useCallback(() => {
+      if (user) {
+        const now = Date.now();
+        const timeSinceLastRefresh = now - lastRefreshTime;
+        const oneMinuteInMs = 60 * 1000; // 1 minute
+        
+        if (timeSinceLastRefresh > oneMinuteInMs) {
+          loadDashboardData(true); // Refresh data when focusing on this tab
+        }
+      }
+    }, [user, loadDashboardData, lastRefreshTime])
+  );
 
   useEffect(() => {
     // Start animations when data is loaded
@@ -166,15 +206,15 @@ export default function HomeScreen() {
 
   // Handle navigation to transactions tab
   const handleViewAllTransactions = () => {
-    // This would navigate to the transactions tab
-    // You can implement router navigation here if needed
-    console.log('Navigate to transactions tab');
+    // Navigate to the transactions tab (explore)
+    router.push('/explore');
   };
 
-  const handleTransactionPress = (transaction: Transacao) => {
-    // Handle transaction item press
-    console.log('Transaction pressed:', transaction);
-  };
+  const onRefresh = useCallback(() => {
+    if (user) {
+      loadDashboardData(true);
+    }
+  }, [user, loadDashboardData]);
 
   if (loading) {
     return (
@@ -188,7 +228,19 @@ export default function HomeScreen() {
   }
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
+    <ScrollView 
+      style={[styles.container, { backgroundColor: colors.background }]}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          colors={[colors.primary]}
+          tintColor={colors.primary}
+          title={t('dashboard.pullToRefresh')}
+          titleColor={colors.textSecondary}
+        />
+      }
+    >
       <PageTitle
         title={t('dashboard.title')}
         subtitle={t('dashboard.subtitle')}
@@ -213,8 +265,8 @@ export default function HomeScreen() {
         loading={loading}
         scaleAnim={scaleAnim}
         onViewAllPress={handleViewAllTransactions}
-        onTransactionPress={handleTransactionPress}
       />
+
     </ScrollView>
   );
 }
@@ -228,9 +280,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingTop: 100,
-  },
-  header: {
-    padding: SPACING * 2,
-    paddingBottom: SPACING,
   },
 });

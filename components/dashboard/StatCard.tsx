@@ -40,23 +40,32 @@ export const StatCard: React.FC<StatCardProps> = ({
   }, [delay, cardAnim, loading]);
 
   return (
-    <Animated.View style={[
-      styles.statCard,
-      { 
-        backgroundColor: colors.backgroundLight,
-        opacity: cardAnim,
-        transform: [{
-          translateY: cardAnim.interpolate({
-            inputRange: [0, 1],
-            outputRange: [30, 0]
-          })
-        }]
-      }
-    ]}>
-      <ThemedView style={[styles.statIcon, { backgroundColor: color + '20' }]}>
+    <Animated.View
+      style={[
+        styles.statCard,
+        {
+          backgroundColor: colors.backgroundLight,
+          opacity: cardAnim,
+          transform: [
+            {
+              translateY: cardAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [30, 0],
+              }),
+            },
+          ],
+        },
+      ]}
+    >
+      <ThemedView style={[styles.statIcon, { backgroundColor: color + "20" }]}>
         <Ionicons name={icon} size={24} color={color} />
       </ThemedView>
-      <ThemedView style={styles.statContent}>
+      <ThemedView
+        style={[
+          styles.statContent,
+          { backgroundColor: colors.backgroundLight },
+        ]}
+      >
         <ThemedText type="body2" style={{ color: colors.textSecondary }}>
           {title}
         </ThemedText>
